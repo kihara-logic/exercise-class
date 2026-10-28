@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>問題4：原点で連続か？ ε-δ で決着をつける</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+:root{
+  --paper:#F3F5F1; --sheet:#FFFFFF; --ink:#1F2A44; --muted:#5B6476; --line:#CAD4D0;
+  --blue:#2F6FB0; --red:#C8323C; --ochre:#A87300; --ok:#1E7A4F; --safe:#3FA16B;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#151C1B; --sheet:#1D2625; --ink:#E3E9E5; --muted:#9AA6A1; --line:#34413D;
+    --blue:#82B6FF; --red:#FF7070; --ochre:#E2B24E; --ok:#5CD69A; --safe:#4CC985;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#151C1B; --sheet:#1D2625; --ink:#E3E9E5; --muted:#9AA6A1; --line:#34413D;
+  --blue:#82B6FF; --red:#FF7070; --ochre:#E2B24E; --ok:#5CD69A; --safe:#4CC985;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+.m{font-family:"STIX Two Text","Cambria Math","Times New Roman",serif;font-size:1.08em;white-space:nowrap}
+.m i,.calc i,.def i{font-style:italic}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.12;margin:0 .1em}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 .25em .05em}
+.frac>span:last-child{padding:.05em .25em 0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+header.wrap{padding-top:24px}
+h1{font-size:clamp(1.45rem,1.05rem + 1.3vw,2rem);line-height:1.3;margin:0;font-weight:700}
+.lede{margin:.4em 0 0;color:var(--muted);max-width:52em}
+.lede .m{color:var(--ink)}
+.def{margin:10px 0 0;padding:8px 14px;background:var(--sheet);border:1px solid var(--line);border-radius:8px;max-width:52em;font-size:14.5px}
+.def b{font-weight:700}
+.stepper{list-style:none;margin:16px 0 18px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.stepper button{font:inherit;font-size:14px;display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border:1px solid var(--line);border-radius:999px;background:var(--sheet);color:var(--muted);cursor:pointer}
+.stepper .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);font-weight:700;font-size:13px;line-height:1}
+.stepper button.done .n{background:var(--ok);border-color:var(--ok);color:var(--sheet)}
+.stepper button[aria-current="step"]{color:var(--ink);border-color:var(--ink);font-weight:700}
+.stepper button[aria-current="step"] .n{background:var(--ink);border-color:var(--ink);color:var(--sheet)}
+.layout{display:grid;grid-template-columns:minmax(0,540px) minmax(0,1fr);gap:28px;align-items:start;padding-bottom:28px}
+.colL,.colR{display:flex;flex-direction:column;gap:12px;min-width:0}
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr);gap:12px}
+  .colL,.colR{display:contents}
+  #mission{order:1} .planebox{order:2} #meterBox{order:3} #rangeBox{order:4} .note{order:5}
+}
+.planewrap{position:relative;width:100%;aspect-ratio:1/1;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--sheet)}
+#plane{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.btn{font:inherit;font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer;line-height:1.6}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--sheet);border-color:var(--ink);font-weight:700}
+.btn[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:14px 18px 16px}
+.card h2{font-size:1.15rem;line-height:1.45;margin:0 0 6px}
+.card h3{font-size:1rem;margin:0 0 4px}
+.card p{margin:0 0 8px}
+.meter{padding:10px 14px 12px}
+.mtop{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:4px 16px}
+.mlabel{font-size:13px;color:var(--muted)}
+.mval{font-size:34px;line-height:1.15;font-weight:600}
+.mside{font-size:13px;color:var(--muted);text-align:right;line-height:1.6}
+.mside .in{color:var(--ok);font-weight:700}
+.mside .out{color:var(--red);font-weight:700}
+#mline{width:100%;height:40px;display:block;margin-top:6px}
+.keys{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:3px;font-size:13px;color:var(--muted)}
+.keys li{display:flex;align-items:center;gap:8px}
+.k{flex:0 0 26px;height:14px;display:inline-block;position:relative}
+.k-safe{background:color-mix(in srgb,var(--safe) 35%,var(--sheet));border:1px solid var(--safe);border-radius:2px}
+.k-hatch{background:repeating-linear-gradient(45deg,var(--red) 0 2px,transparent 2px 6px);border:1px solid var(--red);border-radius:2px}
+.k-dash::after{content:"";position:absolute;left:5px;top:-1px;width:16px;height:16px;border:2px dashed var(--blue);border-radius:50%}
+.k-dot::after{content:"";position:absolute;left:8px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c)}
+.k-cross::after{content:"×";position:absolute;left:7px;top:-6px;color:var(--red);font-weight:700;font-size:18px}
+.k-vir{background:linear-gradient(90deg,#440154,#3b528b,#21918c,#5ec962,#fde725);border-radius:2px}
+.k-scale::after{content:"";position:absolute;left:2px;right:2px;top:4px;height:6px;border:2px solid var(--ink);border-top:none}
+.turns{list-style:none;margin:10px 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;counter-reset:t}
+.turns li{counter-increment:t;border:1px solid var(--line);border-radius:8px;padding:6px 8px 6px 34px;position:relative;font-size:13.5px;line-height:1.45;color:var(--muted);min-height:3.2em}
+.turns li::before{content:counter(t);position:absolute;left:8px;top:7px;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;line-height:1}
+.turns li.cur{border-color:var(--ink);color:var(--ink);font-weight:700;box-shadow:inset 0 0 0 1px var(--ink)}
+.turns li.cur::before{background:var(--ink);border-color:var(--ink);color:var(--sheet)}
+.turns li.fin{color:var(--ink)}
+.turns li.fin::before{content:"✓";background:var(--ok);border-color:var(--ok);color:var(--sheet)}
+.turns .v{display:block;font-weight:400;font-family:"STIX Two Text",serif;font-size:15px}
+@media (max-width:480px){.turns{grid-template-columns:minmax(0,1fr)}}
+.big{font-size:15px;margin:4px 0 8px}
+.big b{font-size:22px}
+.slider{display:grid;grid-template-columns:5.2em 1fr 6.5em;gap:10px;align-items:center;margin:6px 0}
+.slider output{font-family:"STIX Two Text",serif;text-align:right}
+input[type=range]{width:100%;accent-color:var(--blue)}
+.checks{list-style:none;padding:0;margin:10px 0;display:grid;gap:6px}
+.checks li{display:flex;gap:10px;align-items:flex-start}
+.checks li::before{content:"";flex:0 0 20px;height:20px;border:1.5px solid var(--line);border-radius:5px;margin-top:3px;display:grid;place-items:center;font-size:13px;line-height:1;font-weight:700;color:var(--sheet)}
+.checks li.ok::before{content:"✓";background:var(--ok);border-color:var(--ok)}
+.checks li.ok{color:var(--muted)}
+.fb{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:10px 0;border-radius:0}
+.fb.ok{border-color:var(--ok)}
+.fb.ng{border-color:var(--red)}
+.fb p:last-child{margin-bottom:0}
+.predrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:10px 0 4px}
+.predrow input{font-family:"STIX Two Text",serif;font-size:18px;width:6.5em;padding:2px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink)}
+.err{color:var(--red);font-size:13px;margin:2px 0 0}
+.sub{font-size:13.5px;color:var(--muted)}
+details{margin:8px 0;border:1px solid var(--line);border-radius:6px;padding:4px 12px}
+details summary{cursor:pointer;font-size:14px;padding:2px 0}
+details[open]{padding-bottom:10px}
+.calc{font-family:"STIX Two Text","Times New Roman",serif;font-size:16px;line-height:2}
+.calc p{margin:4px 0}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:13.5px;margin:6px 0}
+th,td{padding:3px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:700}
+tr.lose td{color:var(--red)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--paper)}
+tr.sel td{background:var(--paper);font-weight:700}
+.choices{display:grid;gap:8px;margin:10px 0}
+.choices.rules{grid-template-columns:repeat(auto-fit,minmax(7.5em,1fr))}
+.choices button{font:inherit;text-align:left;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);cursor:pointer}
+.choices.rules button{text-align:center;font-family:"STIX Two Text",serif;font-size:17px}
+.choices button[aria-checked="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--sheet)}
+#range{display:block;width:100%;height:96px}
+.cap{font-size:13px;color:var(--muted);margin:4px 0 0}
+.note ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.note li{padding-left:14px;border-left:3px solid var(--line)}
+.note li.empty{border:none;padding:0;color:var(--muted)}
+footer.wrap{color:var(--muted);font-size:13px;padding-bottom:26px}
+footer p{margin:.3em 0;max-width:60em}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>原点で連続か？ ε-δ で決着をつける</h1>
+  <p class="lede">演習の問題4の2つの関数を調べます．どちらも <span class="m"><i>f</i>(0, 0) = 0</span> と定めます．
+    <span class="m">(1)　<i>f</i> = <span class="frac"><span>2<i>x</i>²<i>y</i></span><span><i>x</i>² + <i>y</i>²</span></span></span>　
+    <span class="m">(2)　<i>f</i> = <span class="frac"><span>2<i>xy</i></span><span><i>x</i>² + <i>y</i>²</span></span></span></p>
+  <p class="def"><b>(0, 0) で連続</b>とは：どんな <span class="m">ε &gt; 0</span> に対しても，<span class="m">|<i>x</i>| &lt; δ</span> ならば <span class="m">|<i>f</i>(<i>x</i>) − <i>f</i>(0, 0)| &lt; ε</span> となる <span class="m">δ &gt; 0</span> がとれること．これを「相手が ε を出し，あなたが δ で答える」ゲームとして体験します．</p>
+  <ol class="stepper" id="stepper" aria-label="ミッションの順番"></ol>
+</header>
+
+<main class="wrap layout">
+  <div class="colL">
+    <div class="planebox">
+      <div class="planewrap" id="planewrap"><canvas id="plane" tabindex="0" aria-label="xy 平面"></canvas></div>
+      <div class="row" id="zoomRow">
+        <button class="btn" id="zfull">全体を表示</button>
+        <button class="btn" id="zdelta">δ 円が見える大きさまで拡大</button>
+      </div>
+    </div>
+    <div class="card meter" id="meterBox">
+      <div class="mtop">
+        <div><div class="mlabel" id="mwhat"></div><div class="mval m" id="mval">—</div></div>
+        <div class="mside" id="mside"></div>
+      </div>
+      <canvas id="mline" aria-hidden="true"></canvas>
+      <ul class="keys" id="keys" aria-label="平面の見方"></ul>
+    </div>
+  </div>
+
+  <div class="colR">
+    <section class="card" id="mission" aria-live="polite"></section>
+    <section class="card" id="rangeBox" hidden>
+      <h3>円の中で <i>f</i> がとる値</h3>
+      <canvas id="range" aria-label="円の中の f の値の範囲と許される範囲"></canvas>
+      <p class="cap" id="rangeCap"></p>
+    </section>
+    <section class="card note">
+      <h3>調べたことノート</h3>
+      <ul id="note"></ul>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  <p>コンピュータは有限個の点しか調べないので，ゲームの勝ち負けは証明ではありません．「式で確かめる」「きちんと書くと」で証明の形も確認しましょう．</p>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const $=(s)=>document.querySelector(s);
+const SUPC={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const SUBC='₀₁₂₃₄₅₆₇₈₉';
+const sup=(e)=>String(e).split('').map(c=>SUPC[c]||c).join('');
+const sub=(n)=>String(n).split('').map(c=>SUBC[+c]).join('');
+function strip0(s){ if(s.indexOf('.')>=0){ s=s.replace(/0+$/,'').replace(/\.$/,''); } return s.replace(/^-/,'−'); }
+function sci(v,d=3){
+  if(!Number.isFinite(v)) return '—'; if(v===0) return '0';
+  const a=Math.abs(v); let e=Math.floor(Math.log10(a));
+  if(e>=-3&&e<4) return strip0(v.toFixed(Math.max(0,d-1-e)));
+  let ms=strip0((v/Math.pow(10,e)).toFixed(d-1));
+  if(ms==='10'||ms==='−10'){ e+=1; ms=ms[0]==='−'?'−1':'1'; }
+  return (ms==='1'?'':ms==='−1'?'−':ms+' × ')+'10'+sup(e);
+}
+const frac=(n,d)=>`<span class="frac"><span>${n}</span><span>${d}</span></span>`;
+const FN={
+  1:(x,y)=>{ const r2=x*x+y*y; return r2===0?0:2*x*x*y/r2; },
+  2:(x,y)=>{ const r2=x*x+y*y; return r2===0?0:2*x*y/r2; }
+};
+const VIR=[[68,1,84],[59,82,139],[33,145,140],[94,201,98],[253,231,37]];
+function vir(v){ let t=(v+1)/2; t=t<0?0:t>1?1:t; const s=t*4, i=Math.min(3,Math.floor(s)), u=s-i, a=VIR[i], b=VIR[i+1]; return [a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u,a[2]+(b[2]-a[2])*u]; }
+let C={};
+function hexToRgb(h){ h=h.trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function readTheme(){ const cs=getComputedStyle(document.documentElement); for(const k of ['paper','sheet','ink','muted','line','blue','red','ochre','ok','safe']) C[k]=hexToRgb(cs.getPropertyValue('--'+k)); }
+const rgba=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const FONT='"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI",sans-serif';
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+
+const R_FULL=1.25;
+const EPS1=[0.5,0.2,0.1,0.05];
+const D4=[0.5,0.1,0.02,0.004,0.0008];
+const RULES=[
+  {id:'2e',label:'δ = 2ε',fn:(e)=>2*e},
+  {id:'e',label:'δ = ε',fn:(e)=>e},
+  {id:'e2',label:'δ = ε/2',fn:(e)=>e/2},
+  {id:'sq',label:'δ = √ε',fn:(e)=>Math.sqrt(e)},
+  {id:'ee',label:'δ = ε²',fn:(e)=>e*e}
+];
+const TESTEPS=[0.5,0.2,0.1,0.05,0.02,0.01,1e-3,1e-4,1e-5,1e-6];
+
+const state={
+  step:1, done:{1:false,2:false,3:false,4:false,5:false,6:false}, R:R_FULL, hover:null, notes:{},
+  g1:{round:0, phase:'delta', delta:1, res:null, wins:[]},
+  g2:{rule:null, rows:null, view:null},
+  g3:{phase:'delta', delta:0.5, res:null, tries:[], minDelta:Infinity},
+  g4:{eps:null, round:0, pts:[], misses:[], phase:'eps', last:null},
+  g6:{fn:2, seen:{1:1,2:1}},
+  choice:null, search:null
+};
+
+/* ---------- 現在の設定 ---------- */
+const fnId=()=>state.step<=2?1:state.step<=5?2:state.g6.fn;
+const fnNow=()=>FN[fnId()];
+function epsNow(){ const s=state.step;
+  if(s===1) return EPS1[Math.min(state.g1.round,EPS1.length-1)];
+  if(s===2) return state.g2.view?state.g2.view.eps:null;
+  if(s===3) return 0.5;
+  if(s===4) return state.g4.eps;
+  if(s===5) return state.g4.eps||0.5;
+  return null; }
+function deltaNow(){ const s=state.step;
+  if(s===1) return state.g1.delta;
+  if(s===2) return state.g2.view?state.g2.view.delta:null;
+  if(s===3) return state.g3.delta;
+  if(s===4) return (state.g4.phase==='click')?D4[state.g4.round]:null;
+  return null; }
+
+/* ---------- 円の中を調べる ---------- */
+const ANG=(()=>{ const a=[]; for(let k=0;k<720;k++) a.push(2*Math.PI*k/720);
+  for(const b of [0,Math.PI/2,Math.PI,1.5*Math.PI]) for(let q=0;q<=30;q++){ const o=Math.pow(10,-(1+6*q/30)); a.push(b+o,b-o); }
+  const z=(v)=>Math.abs(v)<1e-14?0:v; return {c:a.map(t=>z(Math.cos(t))), s:a.map(t=>z(Math.sin(t)))}; })();
+const RAD=(()=>{ const r=[]; for(let i=0;i<30;i++) r.push(0.999*(1-i/30)); for(let k=0;k<30;k++) r.push(Math.pow(10,-1.6-6*k/29)); return r; })();
+function scanDisk(f,delta){
+  let mn=0,mx=0,best=0,bx=0,by=0,bv=0; const cs=ANG.c, sn=ANG.s, M=cs.length;
+  for(let i=0;i<RAD.length;i++){ const r=RAD[i]*delta;
+    for(let k=0;k<M;k++){ const x=r*cs[k], y=r*sn[k], v=f(x,y); if(v<mn) mn=v; if(v>mx) mx=v; const a=Math.abs(v); if(a>best){ best=a; bx=x; by=y; bv=v; } } }
+  return {mn,mx,best,bx,by,bv};
+}
+let scanKey='', scanCache=null;
+function scanNow(){ const d=deltaNow(); if(!d) return null; const key=fnId()+'|'+d; if(key!==scanKey){ scanKey=key; scanCache=scanDisk(fnNow(),d); } return scanCache; }
+
+/* ---------- 平面 ---------- */
+const plane=$('#plane'), pctx=plane.getContext('2d');
+const heat=document.createElement('canvas'), hctx=heat.getContext('2d');
+let size=500, dpr=1, heatKey='', zoomAnim=false, planeMsg='';
+const X=(x)=>(x+state.R)/(2*state.R)*size, Y=(y)=>(state.R-y)/(2*state.R)*size;
+function sizePlane(){ size=$('#planewrap').clientWidth||500; dpr=Math.min(window.devicePixelRatio||1,2); plane.width=Math.round(size*dpr); plane.height=Math.round(size*dpr); heatKey=''; }
+function renderHeat(){
+  const N=zoomAnim?150:Math.min(480,Math.max(150,Math.round(size))), R=state.R, eps=epsNow(), id=fnId(), mode=state.step===6?'vir':(eps?'zone':'none');
+  const key=[R,N,eps,id,mode,C.sheet.join()].join('|'); if(key===heatKey) return; heatKey=key;
+  heat.width=N; heat.height=N; const img=hctx.createImageData(N,N), d=img.data, h=2*R/N, f=FN[id];
+  const sh=C.sheet, sf=C.safe, rd=C.red;
+  for(let j=0;j<N;j++){ const y=R-(j+0.5)*h; for(let i=0;i<N;i++){ const v=f(-R+(i+0.5)*h,y), p=(j*N+i)*4; let r,g,b;
+    if(mode==='vir'){ [r,g,b]=vir(v); }
+    else if(mode==='zone'){ if(Math.abs(v)<eps){ r=sh[0]+(sf[0]-sh[0])*0.32; g=sh[1]+(sf[1]-sh[1])*0.32; b=sh[2]+(sf[2]-sh[2])*0.32; }
+      else { const s=(((i+j)%8)<2)?0.55:0.1; r=sh[0]+(rd[0]-sh[0])*s; g=sh[1]+(rd[1]-sh[1])*s; b=sh[2]+(rd[2]-sh[2])*s; } }
+    else { r=sh[0]; g=sh[1]; b=sh[2]; }
+    d[p]=r; d[p+1]=g; d[p+2]=b; d[p+3]=255; } }
+  hctx.putImageData(img,0,0);
+}
+function niceStep(raw){ const e=Math.floor(Math.log10(raw)), b=Math.pow(10,e), m=raw/b; return (m<=1.0001?1:m<=2.0001?2:m<=5.0001?5:10)*b; }
+function niceFloor(raw){ const e=Math.floor(Math.log10(raw)), b=Math.pow(10,e), m=raw/b; return (m>=4.9999?5:m>=1.9999?2:1)*b; }
+function labelBox(txt,x,y){ const ctx=pctx; ctx.textAlign='left'; const w=ctx.measureText(txt).width; ctx.fillStyle=rgba(C.sheet,0.82); ctx.fillRect(x-2,y-11,w+4,14); ctx.fillStyle=rgba(C.muted); ctx.fillText(txt,x,y); }
+function drawGrid(){
+  const ctx=pctx, R=state.R, major=niceStep(R/2.5), minor=major/5;
+  const lines=(st,a)=>{ ctx.strokeStyle=rgba(C.ink,a); ctx.lineWidth=1; ctx.beginPath();
+    for(let k=Math.ceil(-R/st);k<=Math.floor(R/st);k++){ const v=k*st, px=Math.round(X(v))+0.5, py=Math.round(Y(v))+0.5; ctx.moveTo(px,0); ctx.lineTo(px,size); ctx.moveTo(0,py); ctx.lineTo(size,py); } ctx.stroke(); };
+  lines(minor,0.06); lines(major,0.18);
+  ctx.strokeStyle=rgba(C.ink,0.6); ctx.lineWidth=1.2; ctx.beginPath(); const ox=Math.round(X(0))+0.5, oy=Math.round(Y(0))+0.5;
+  ctx.moveTo(ox,0); ctx.lineTo(ox,size); ctx.moveTo(0,oy); ctx.lineTo(size,oy); ctx.stroke();
+  ctx.font='11px '+FONT; ctx.textBaseline='alphabetic';
+  for(let k=Math.ceil(-R/major);k<=Math.floor(R/major);k++){ if(k===0) continue; const v=k*major, t=sci(v,2); labelBox(t,X(v)+3,size-6); labelBox(t,4,Y(v)-4); }
+}
+function drawScaleBar(){
+  const ctx=pctx, len=niceFloor(state.R/2), px=len/(2*state.R)*size, x1=size-16, x0=x1-px, y=size-30;
+  ctx.font='12px '+FONT; const txt='この長さ ＝ '+sci(len,2), tw=ctx.measureText(txt).width, bx=Math.min(x0,x1-tw)-8;
+  ctx.fillStyle=rgba(C.sheet,0.9); ctx.fillRect(bx,y-24,x1-bx+8,34);
+  ctx.strokeStyle=rgba(C.ink); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x0,y-5); ctx.lineTo(x0,y+2); ctx.lineTo(x1,y+2); ctx.lineTo(x1,y-5); ctx.stroke();
+  ctx.fillStyle=rgba(C.ink); ctx.textAlign='right'; ctx.fillText(txt,x1,y-10);
+}
+function planeNote(text){
+  const ctx=pctx; ctx.font='13px '+FONT; ctx.textAlign='left'; const maxW=size-56, lines=[]; let cur='';
+  for(const ch of text){ if(ctx.measureText(cur+ch).width>maxW){ lines.push(cur); cur=ch; } else cur+=ch; } if(cur) lines.push(cur);
+  const lh=19, w=Math.max(...lines.map(l=>ctx.measureText(l).width))+20, h=lines.length*lh+12, x0=(size-w)/2, y0=12;
+  ctx.fillStyle=rgba(C.sheet,0.94); ctx.fillRect(x0,y0,w,h); ctx.strokeStyle=rgba(C.blue,0.85); ctx.lineWidth=1; ctx.strokeRect(x0+0.5,y0+0.5,w-1,h-1);
+  ctx.fillStyle=rgba(C.ink); lines.forEach((l,i)=>ctx.fillText(l,x0+10,y0+lh*(i+1)));
+}
+function cross(x,y,s,col){ const ctx=pctx; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x-s,y-s); ctx.lineTo(x+s,y+s); ctx.moveTo(x+s,y-s); ctx.lineTo(x-s,y+s);
+  ctx.strokeStyle=rgba(C.sheet,0.9); ctx.lineWidth=5; ctx.stroke(); ctx.strokeStyle=col; ctx.lineWidth=2.4; ctx.stroke(); }
+function tag(px,py,t,col){ const ctx=pctx; ctx.font='13px '+FONT; ctx.textAlign='left'; const w=ctx.measureText(t).width; const lx=Math.min(px+9,size-w-6), ly=Math.max(py-9,16);
+  ctx.fillStyle=rgba(C.sheet,0.9); ctx.fillRect(lx-3,ly-13,w+6,18); ctx.fillStyle=col; ctx.fillText(t,lx,ly); }
+function drawPlane(){
+  const ctx=pctx, st=state.step;
+  ctx.setTransform(1,0,0,1,0,0); renderHeat(); ctx.imageSmoothingEnabled=false; ctx.drawImage(heat,0,0,plane.width,plane.height);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawGrid();
+  const blue=rgba(C.blue), red=rgba(C.red);
+  const d=deltaNow();
+  if(d){ const r=d/(2*state.R)*size; ctx.beginPath(); ctx.arc(X(0),Y(0),r,0,2*Math.PI); ctx.fillStyle=rgba(C.blue,0.08); ctx.fill();
+    ctx.setLineDash([6,4]); ctx.lineWidth=2.2; ctx.strokeStyle=blue; ctx.stroke(); ctx.setLineDash([]);
+    if(r<12){ ctx.beginPath(); ctx.arc(X(0),Y(0),16,0,2*Math.PI); ctx.setLineDash([2,2]); ctx.lineWidth=1.5; ctx.strokeStyle=blue; ctx.stroke(); ctx.setLineDash([]);
+      planeMsg='δ 円が小さすぎて見えません（原点のまわりの点線の内側にあります）．「δ 円が見える大きさまで拡大」を押してください．'; }
+    else if(d>state.R*1.42) planeMsg='δ 円は画面全体を覆っています．「全体を表示」で円周が見えます．'; }
+  if(state.search){ const s=state.search, n=Math.floor(s.pts.length*Math.min(1,(performance.now()-s.t0)/s.dur)); ctx.fillStyle=rgba(C.ink,0.55);
+    for(let i=0;i<n;i++){ const [x,y]=s.pts[i]; ctx.beginPath(); ctx.arc(X(x),Y(y),1.7,0,2*Math.PI); ctx.fill(); } }
+  const res=st===1?state.g1.res:st===3?state.g3.res:null;
+  if(res&&!res.win&&!state.search){ cross(X(res.bx),Y(res.by),7,red); tag(X(res.bx),Y(res.by),'反例',red); }
+  if(st===3) state.g3.tries.forEach(q=>{ if(q.bx===undefined||(res&&q===res)) return; const px=X(q.bx), py=Y(q.by); if(px>-5&&py>-5&&px<size+5&&py<size+5){ ctx.beginPath(); ctx.arc(px,py,3,0,2*Math.PI); ctx.fillStyle=rgba(C.red,0.45); ctx.fill(); } });
+  if(st===4||st===5){ state.g4.misses.forEach(q=>{ if(st===4&&q.round===state.g4.round) cross(X(q.x),Y(q.y),5,rgba(C.muted)); });
+    ctx.strokeStyle=rgba(C.red,0.5); ctx.lineWidth=1.2; ctx.beginPath(); state.g4.pts.forEach((q,i)=>{ i?ctx.lineTo(X(q.x),Y(q.y)):ctx.moveTo(X(q.x),Y(q.y)); }); ctx.stroke();
+    state.g4.pts.forEach((q,i)=>{ const px=X(q.x),py=Y(q.y); ctx.beginPath(); ctx.arc(px,py,4.5,0,2*Math.PI); ctx.fillStyle=red; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=rgba(C.sheet); ctx.stroke(); if(px>-5&&py>-5&&px<size+5&&py<size+5) tag(px,py,'x'+sub(i+1),red); }); }
+  ctx.beginPath(); ctx.arc(X(0),Y(0),4,0,2*Math.PI); ctx.fillStyle=rgba(C.ink); ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=rgba(C.sheet); ctx.stroke();
+  drawScaleBar();
+  if(planeMsg){ planeNote(planeMsg); planeMsg=''; }
+}
+
+/* ---------- メーター ---------- */
+function setupCanvas(cv){ const w=cv.clientWidth||300, h=cv.clientHeight||100, dp=Math.min(window.devicePixelRatio||1,2);
+  if(cv.width!==Math.round(w*dp)||cv.height!==Math.round(h*dp)){ cv.width=Math.round(w*dp); cv.height=Math.round(h*dp); }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dp,0,0,dp,0,0); ctx.clearRect(0,0,w,h); return {ctx,w,h}; }
+function numberLine(ctx,w,y,eps,lo,hi){
+  const l=14,r=14,pw=w-l-r, xs=(v)=>l+(v-lo)/(hi-lo)*pw;
+  if(eps){ const a=xs(Math.max(lo,-eps)), b=xs(Math.min(hi,eps)); ctx.fillStyle=rgba(C.safe,0.3); ctx.fillRect(a,y-9,b-a,18); ctx.strokeStyle=rgba(C.safe); ctx.lineWidth=1.5; ctx.strokeRect(a,y-9,b-a,18); }
+  ctx.strokeStyle=rgba(C.ink,0.6); ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(l,y); ctx.lineTo(l+pw,y); ctx.stroke();
+  ctx.font='11px '+FONT; ctx.fillStyle=rgba(C.muted); ctx.textAlign='center'; ctx.textBaseline='top';
+  [-1,-0.5,0,0.5,1].forEach(v=>{ ctx.beginPath(); ctx.moveTo(xs(v),y-3); ctx.lineTo(xs(v),y+3); ctx.stroke(); ctx.fillText(sci(v,2),xs(v),y+11); });
+  return xs;
+}
+function meterPoint(){
+  if(state.hover) return {x:state.hover.x,y:state.hover.y,what:'カーソルの位置での f の値'};
+  const st=state.step, res=st===1?state.g1.res:st===3?state.g3.res:null;
+  if(res&&!res.win) return {x:res.bx,y:res.by,what:'相手が見つけた反例 × での f の値'};
+  if((st===4||st===5)&&state.g4.last) return {x:state.g4.last.x,y:state.g4.last.y,what:'最後にクリックした点での f の値'};
+  return null;
+}
+function updateMeter(){
+  const pt=meterPoint(), eps=epsNow(), f=fnNow(), cv=$('#mline'), {ctx,w,h}=setupCanvas(cv);
+  let v=NaN;
+  if(!pt){ $('#mwhat').textContent='平面にカーソルを置く（スマートフォンではタップする）と，その点での f の値を表示します'; $('#mval').textContent='—'; $('#mside').innerHTML=''; }
+  else { v=f(pt.x,pt.y); $('#mwhat').textContent=pt.what; $('#mval').textContent=sci(v,4);
+    let s='点 <span class="m">('+sci(pt.x,3)+', '+sci(pt.y,3)+')</span><br>原点までの距離 <span class="m">'+sci(Math.hypot(pt.x,pt.y),3)+'</span>';
+    if(eps) s+='<br><span class="m">|<i>f</i> − <i>f</i>(0,0)| = '+sci(Math.abs(v),3)+'</span>：'+(Math.abs(v)<eps?'<span class="in">緑の帯の中</span>':'<span class="out">帯の外</span>');
+    $('#mside').innerHTML=s; }
+  if(state.step===6){ const g=ctx.createLinearGradient(14,0,w-14,0); VIR.forEach((c,i)=>g.addColorStop(i/4,`rgb(${c[0]},${c[1]},${c[2]})`)); ctx.fillStyle=g; ctx.fillRect(14,8,w-28,10);
+    ctx.font='11px '+FONT; ctx.fillStyle=rgba(C.muted); ctx.textBaseline='top'; ctx.textAlign='left'; ctx.fillText('−1（色 ＝ f の値）',14,22); ctx.textAlign='right'; ctx.fillText('1',w-14,22);
+    if(Number.isFinite(v)){ const x=14+(v+1)/2*(w-28); ctx.fillStyle=rgba(C.ink); ctx.beginPath(); ctx.moveTo(x-6,0); ctx.lineTo(x+6,0); ctx.lineTo(x,7); ctx.closePath(); ctx.fill(); } }
+  else { const xs=numberLine(ctx,w,14,eps,-1.1,1.1);
+    if(Number.isFinite(v)){ const x=xs(Math.max(-1.1,Math.min(1.1,v))); ctx.fillStyle=rgba(C.ink); ctx.beginPath(); ctx.moveTo(x-6,0); ctx.lineTo(x+6,0); ctx.lineTo(x,8); ctx.closePath(); ctx.fill(); } }
+}
+function keyItem(cls,text,style){ return '<li><span class="k '+cls+'"'+(style?' style="'+style+'"':'')+' aria-hidden="true"></span><span>'+text+'</span></li>'; }
+function updateKeys(){
+  const st=state.step, eps=epsNow(); let h='';
+  if(st===6) h+=keyItem('k-vir','色：その点での <i>f</i> の値（−1 から 1）');
+  else { h+=keyItem('k-dot','黒丸：原点．<i>f</i>(0, 0) = 0','--c:'+rgba(C.ink));
+    if(eps){ h+=keyItem('k-safe','緑：<span class="m">|<i>f</i>(<i>x</i>) − <i>f</i>(0,0)| &lt; ε</span> となる点（数直線の緑の帯と同じ）'); h+=keyItem('k-hatch','赤い斜線：<span class="m">|<i>f</i>(<i>x</i>) − <i>f</i>(0,0)| ≥ ε</span> となる点．ここが反例になる'); }
+    if(deltaNow()) h+=keyItem('k-dash','青い破線の円：半径 δ の円．'+(st===4?'相手が出した δ':'あなたが選んだ δ'));
+    if((st===1||st===3)) h+=keyItem('k-cross','×：相手が見つけた反例');
+    if(st===4||st===5) h+=keyItem('k-dot','赤い点：あなたが示した反例 <span class="m"><i>x</i>₁, <i>x</i>₂, …</span>','--c:'+rgba(C.red)); }
+  h+=keyItem('k-scale','右下の目盛り：その長さが表す実際の距離（拡大すると変わる）');
+  $('#keys').innerHTML=h;
+}
+
+/* ---------- 値の範囲パネル ---------- */
+function drawRange(){
+  const box=$('#rangeBox'), st=state.step, show=(st===1||st===3||st===4&&state.g4.phase==='click');
+  box.hidden=!show; if(!show) return;
+  const {ctx,w,h}=setupCanvas($('#range')), eps=epsNow(), sc=scanNow(), xs=numberLine(ctx,w,56,eps,-1.1,1.1);
+  ctx.font='12px '+FONT; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+  const narrow=w<440;
+  if(eps){ ctx.fillStyle=rgba(C.ok); ctx.fillText(narrow?'緑の帯：0 ± '+sci(eps,3):'緑の帯：0 ± ε（ε = '+sci(eps,3)+'）',14,14); }
+  if(sc&&!state.search){
+    const a=xs(Math.max(-1.1,sc.mn)), b=xs(Math.min(1.1,sc.mx)), y=36;
+    const segs=[[sc.mn,Math.min(sc.mx,-(eps||0)),'out'],[Math.max(sc.mn,-(eps||Infinity)),Math.min(sc.mx,eps||Infinity),'in'],[Math.max(sc.mn,eps||0),sc.mx,'out']];
+    ctx.lineCap='butt'; ctx.lineWidth=8;
+    segs.forEach(([u,v,k])=>{ if(!(v>u)) return; if(!eps&&k==='out') return; ctx.strokeStyle=k==='in'?rgba(C.blue):rgba(C.red); ctx.beginPath(); ctx.moveTo(xs(Math.max(-1.1,u)),y); ctx.lineTo(xs(Math.min(1.1,v)),y); ctx.stroke(); });
+    if(!eps){ ctx.strokeStyle=rgba(C.blue); ctx.beginPath(); ctx.moveTo(a,y); ctx.lineTo(b,y); ctx.stroke(); }
+    ctx.fillStyle=rgba(C.ink); ctx.textAlign='right'; ctx.fillText((narrow?'円の中：':'円の中の値：')+sci(sc.mn,3)+' 〜 '+sci(sc.mx,3),w-14,14);
+  }
+  const res=st===1?state.g1.res:st===3?state.g3.res:null;
+  if(res&&!res.win&&!state.search){ const x=xs(Math.max(-1.1,Math.min(1.1,res.bv))); ctx.strokeStyle=rgba(C.red); ctx.lineWidth=2.4; ctx.beginPath(); ctx.moveTo(x-5,31); ctx.lineTo(x+5,41); ctx.moveTo(x+5,31); ctx.lineTo(x-5,41); ctx.stroke(); }
+  if(st===4&&state.g4.last){ const x=xs(Math.max(-1.1,Math.min(1.1,state.g4.last.v))); ctx.fillStyle=rgba(state.g4.last.ok?C.red:C.muted); ctx.beginPath(); ctx.arc(x,36,5,0,2*Math.PI); ctx.fill(); }
+  $('#rangeCap').textContent = st===4 ? '青い棒が円の中の値の範囲です．赤い部分（帯の外）の値をとる点を円の中から選べば反例になります．'
+    : '青い棒が円の中の値の範囲です．棒が全部緑の帯に収まれば（赤い部分がなければ）あなたの勝ちです．';
+}
+
+/* ---------- ミッション本文 ---------- */
+function turnsHTML(labels,cur,vals){ return labels.map((t,i)=>'<li class="'+(i<cur?'fin':i===cur?'cur':'')+'">'+t+(vals[i]?'<span class="v">'+vals[i]+'</span>':'')+'</li>').join(''); }
+const deltaSlider=(v)=>`<div class="slider"><label for="dl">あなたの δ</label><input type="range" id="dl" min="-6" max="0.3" step="0.01" value="${Math.log10(v)}"><output id="dout" class="m"></output></div>`;
+const T1=()=>`
+<h2>1．ε-δ ゲームの練習：(1) の関数</h2>
+<p>相手（コンピュータ）が ε を出し，あなたが δ を選びます．相手は半径 δ の円の中から，<span class="m">|<i>f</i>(<i>x</i>) − <i>f</i>(0,0)| ≥ ε</span> となる点（反例）を探し，見つからなければあなたの勝ちです．4ラウンド続けて勝てるか挑戦しよう．</p>
+<ol class="turns" id="turns"></ol>
+<p class="big">ラウンド <span id="rnd"></span> / 4　相手の ε ＝ <b class="m" id="epsv"></b></p>
+<p class="sub">平面をドラッグすると円の大きさ δ が変わります．円の中が緑だけになるように選ぼう．</p>
+${deltaSlider(state.g1.delta)}
+<div class="row"><button class="btn primary" id="judge">この δ で勝負する</button></div>
+<div class="fb" id="gfb" hidden></div>
+<div class="row" id="nextRow" hidden><button class="btn primary" id="nextRound">次のラウンドへ</button></div>
+<div class="fb ok" id="done1" hidden><p>4ラウンド全勝です．ε が小さくなっても，δ を小さくすれば勝てました．次は，どんな ε にも勝てる δ の決め方を探します．</p>
+<div class="row"><button class="btn primary" data-go="2">次へ：勝ち方の法則</button></div></div>`;
+const T2=()=>`
+<h2>2．勝ち方の法則を見つけよう</h2>
+<p>練習で勝てた ε と δ の組です．δ/ε の列に注目して，どんな ε にも勝てる δ の決め方（ε の式）を考えます．</p>
+<div class="tablewrap"><table id="wintab"></table></div>
+<p>次のうち，どの ε に対しても勝てそうな決め方はどれでしょう．選ぶと，コンピュータがその式でいろいろな ε と自動で対戦します．</p>
+<div class="choices rules" role="radiogroup" aria-label="δ の決め方">${RULES.map(r=>`<button role="radio" aria-checked="false" data-r="${r.id}">${r.label}</button>`).join('')}</div>
+<div id="ruleRes" hidden><div class="fb" id="rulefb"></div><div class="tablewrap"><table id="ruletab"></table></div><p class="sub">表の行を押すと，その ε と δ を平面で見られます．</p></div>
+<details id="why2" hidden><summary>式で確かめる</summary><div class="calc">
+<p><span class="m">|<i>f</i>(<i>x</i>, <i>y</i>)| = ${frac('2<i>x</i>²|<i>y</i>|','<i>x</i>² + <i>y</i>²')} ≤ 2|<i>y</i>| ≤ 2√(<i>x</i>² + <i>y</i>²)</span>（<span class="m"><i>x</i>²/(<i>x</i>² + <i>y</i>²) ≤ 1</span> を使った）．</p>
+<p>よって <span class="m">√(<i>x</i>² + <i>y</i>²) &lt; δ = ε/2</span> ならば <span class="m">|<i>f</i>(<i>x</i>, <i>y</i>) − <i>f</i>(0, 0)| &lt; 2δ = ε</span>．原点では差は 0．どんな ε にもこの δ で勝てるので，(1) は (0, 0) で連続．</p></div></details>
+<div class="row" id="go3" hidden><button class="btn primary" data-go="3">次へ：(2) で勝負</button></div>`;
+const T3=()=>`
+<h2>3．(2) の関数で勝負</h2>
+<p>今度は (2) の関数です．相手の ε は 0.5 のまま変わりません．δ をいろいろ変えて勝負してみよう．</p>
+<ol class="turns" id="turns"></ol>
+<ul class="checks"><li id="c3a">一度勝負する</li><li id="c3b">δ ≤ 0.01 で勝負する</li><li id="c3c">δ ≤ 0.0001 で勝負する（拡大が必要です）</li></ul>
+${deltaSlider(state.g3.delta)}
+<div class="row"><button class="btn primary" id="judge">この δ で勝負する</button></div>
+<div class="fb" id="gfb" hidden></div>
+<div class="fb ok" id="done3" hidden><p>どんなに小さい δ を選んでも，相手は直線 <i>y</i> = <i>x</i>（または <i>y</i> = −<i>x</i>）の上に <span class="m">|<i>f</i>| = 1</span> となる反例を見つけてきます．ε = 0.5 に対しては，どの δ でも勝てません．</p>
+<details><summary>式で確かめる</summary><div class="calc"><p><span class="m"><i>f</i>(<i>t</i>, <i>t</i>) = ${frac('2<i>t</i>²','<i>t</i>² + <i>t</i>²')} = 1</span>（<span class="m"><i>t</i> ≠ 0</span>）．点 <span class="m">(δ/2, δ/2)</span> はどんな δ でも円の中にあり，そこで <span class="m">|<i>f</i> − <i>f</i>(0,0)| = 1 ≥ 0.5</span>．</p></div></details>
+<div class="row"><button class="btn primary" data-go="4">次へ：役割交代</button></div></div>`;
+const T4=()=>`
+<h2>4．役割交代：あなたが反例を作る</h2>
+<p>今度はあなたが相手役です．まずあなたが ε を<b>一度だけ</b>決めます．そのあとコンピュータが δ をだんだん小さくして出すので，そのたびに円の中で <span class="m">|<i>f</i>(<i>x</i>)| ≥ ε</span> となる点をクリックして示します．5回続けて示せたら成功です．</p>
+<ol class="turns" id="turns"></ol>
+<div class="predrow" id="epsRow"><label for="eps0">あなたの ε ＝</label><input id="eps0" type="number" step="0.1" min="0" inputmode="decimal"><button class="btn primary" id="setEps">この ε で始める</button></div>
+<p class="err" id="eerr" hidden></p>
+<div id="roundBox" hidden><p id="roundMsg"></p><div class="fb" id="clickfb" hidden></div></div>
+<div class="fb ok" id="done4" hidden></div>
+<div class="row"><button class="btn" id="reset4">ε を決め直す</button></div>`;
+const T5=()=>`
+<h2>5．結論は？</h2>
+<p>ここまでの結果から，問題4の答えとして正しいものはどれでしょう．</p>
+<div class="choices" role="radiogroup" aria-label="結論を選ぶ">
+  <button role="radio" aria-checked="false" data-c="a">(1) も (2) も (0, 0) で連続</button>
+  <button role="radio" aria-checked="false" data-c="b">(1) は連続，(2) は連続でない</button>
+  <button role="radio" aria-checked="false" data-c="c">(1) は連続でない，(2) は連続</button>
+  <button role="radio" aria-checked="false" data-c="d">(1) も (2) も連続でない</button>
+</div>
+<div class="fb" id="fb5" hidden></div>
+<details id="formal5" hidden><summary>きちんと書くと</summary><div class="calc">
+<p><b>(1)</b>　任意の ε &gt; 0 に対し δ = ε/2 とおく．|(<i>x</i>, <i>y</i>)| &lt; δ かつ (<i>x</i>, <i>y</i>) ≠ (0, 0) なら |<i>f</i>(<i>x</i>, <i>y</i>)| ≤ 2|<i>y</i>| ≤ 2|(<i>x</i>, <i>y</i>)| &lt; ε．(0, 0) では差は 0．よって (0, 0) で連続．</p>
+<p><b>(2)</b>　点列 <i>x<sub>n</sub></i> = (1/<i>n</i>, 1/<i>n</i>) は (0, 0) に収束するが，<i>f</i>(<i>x<sub>n</sub></i>) = 1 なので <i>f</i>(<i>x<sub>n</sub></i>) → 1 ≠ 0 = <i>f</i>(0, 0)．定理1の (B) が成り立たないので，(0, 0) で連続でない．（ε-δ で書くなら，ε = 1/2 に対し，どんな δ でも点 (δ/2, δ/2) が反例になる．）</p></div></details>
+<div class="row" id="go6" hidden><button class="btn primary" data-go="6">発展：拡大すると？</button></div>`;
+const T6=()=>`
+<h2>発展：原点のまわりを拡大すると？</h2>
+<p>平面に <i>f</i> の値を色で表示しました．関数を切り替えながら，原点のまわりを拡大してみよう．</p>
+<div class="row" role="group" aria-label="関数"><button class="btn" data-fn="1">(1) の関数</button><button class="btn" data-fn="2">(2) の関数</button></div>
+<div class="row" role="group" aria-label="拡大"><button class="btn" data-z="1">等倍</button><button class="btn" data-z="10">10倍</button><button class="btn" data-z="100">100倍</button><button class="btn" data-z="1000">1000倍</button></div>
+<ul class="checks"><li id="c6a">(1) を 100 倍以上に拡大して見る</li><li id="c6b">(2) を 100 倍以上に拡大して見る</li></ul>
+<p class="sub">考えよう：いくら拡大しても模様が変わらないのはどちら？ それは連続性について何を意味する？</p>
+<details id="why6" hidden><summary>式で確かめる</summary><div class="calc">
+<p>極座標 <span class="m"><i>x</i> = <i>r</i> cos θ, <i>y</i> = <i>r</i> sin θ</span> で書くと</p>
+<p>(1)　<span class="m"><i>f</i> = 2<i>r</i> cos²θ sin θ</span>：拡大（<i>r</i> を小さく）すると値が 0 に近づき，色が 0 の色にそろっていく．</p>
+<p>(2)　<span class="m"><i>f</i> = sin 2θ</span>：<i>r</i> によらないので，何倍に拡大しても同じ模様．</p>
+<p>一般に <span class="m"><i>f</i>(λ<i>x</i>) = <i>f</i>(<i>x</i>)</span>（λ &gt; 0）を満たす定数でない関数は，原点で極限をもたない（<i>x</i> を固定して <i>x</i>/<i>n</i> → 0 とすると <i>f</i>(<i>x</i>/<i>n</i>) = <i>f</i>(<i>x</i>) なので，極限があれば <i>f</i>(<i>x</i>) はすべてその値に等しくなる）．</p></div></details>`;
+
+/* ---------- ミッションの組み立て ---------- */
+function renderMission(){
+  const m=$('#mission'), st=state.step;
+  m.innerHTML=[null,T1,T2,T3,T4,T5,T6][st]();
+  if(st===1||st===3){
+    const g=st===1?state.g1:state.g3;
+    $('#dl').addEventListener('input',(e)=>{ setDelta(Math.pow(10,+e.target.value)); });
+    $('#judge').addEventListener('click',judge);
+    if(st===1) $('#nextRound').addEventListener('click',nextRound);
+    if(g.res) showJudge(g.res,true);
+  }
+  if(st===2){
+    m.querySelectorAll('[data-r]').forEach(b=>b.addEventListener('click',()=>testRule(b.dataset.r)));
+    $('#ruletab').addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-i]'); if(!tr) return; const row=state.g2.rows[+tr.dataset.i]; state.g2.view={eps:row.eps,delta:row.delta}; heatKey=''; animateR(Math.min(R_FULL,row.delta*1.6)); renderRuleTable(); });
+    if(state.g2.rule) testRule(state.g2.rule,true);
+  }
+  if(st===4){
+    const inp=$('#eps0'); if(state.g4.eps) inp.value=String(state.g4.eps);
+    inp.addEventListener('input',()=>{ $('#eerr').hidden=true; });
+    inp.addEventListener('keydown',(e)=>{ if(e.key==='Enter') setEps(); });
+    $('#setEps').addEventListener('click',setEps);
+    $('#reset4').addEventListener('click',()=>{ Object.assign(state.g4,{eps:null,round:0,pts:[],misses:[],phase:'eps',last:null}); delete state.notes.m4; renderNote(); renderMission(); heatKey=''; animateR(R_FULL); });
+  }
+  if(st===5){ m.querySelectorAll('[data-c]').forEach(b=>b.addEventListener('click',()=>choose(b.dataset.c))); if(state.choice) choose(state.choice); }
+  if(st===6){
+    m.querySelectorAll('[data-fn]').forEach(b=>b.addEventListener('click',()=>{ state.g6.fn=+b.dataset.fn; heatKey=''; update6(); requestDraw(); }));
+    m.querySelectorAll('[data-z]').forEach(b=>b.addEventListener('click',()=>{ animateR(R_FULL/(+b.dataset.z)); }));
+  }
+  updateMissionDyn();
+}
+$('#mission').addEventListener('click',(e)=>{ const b=e.target.closest('[data-go]'); if(b) goTo(+b.dataset.go); });
+
+function updateMissionDyn(){
+  const st=state.step;
+  if(st===1){ const g=state.g1, phase=g.phase;
+    const cur=phase==='delta'?1:2;
+    $('#turns').innerHTML=turnsHTML(['相手が ε を出す','あなたが δ を選ぶ','判定'],phase==='done'?3:cur,['ε = '+sci(epsNow(),3),'δ = '+sci(g.delta,2),phase==='won'?'あなたの勝ち':phase==='done'?'4ラウンド全勝':phase==='lost'?'相手の勝ち':phase==='searching'?'相手が調べ中…':'']);
+    $('#rnd').textContent=Math.min(g.round+1,4); $('#epsv').textContent=sci(epsNow(),3); $('#dout').textContent=sci(g.delta,2);
+    $('#done1').hidden=!(g.round>=4||state.done[1]&&g.phase==='done');
+  }
+  if(st===3){ const g=state.g3, phase=g.phase;
+    $('#turns').innerHTML=turnsHTML(['相手が ε を出す','あなたが δ を選ぶ','判定'],phase==='delta'?1:2,['ε = 0.5','δ = '+sci(g.delta,2),phase==='lost'?'相手の勝ち':phase==='won'?'あなたの勝ち':phase==='searching'?'相手が調べ中…':'']);
+    $('#dout').textContent=sci(g.delta,2);
+    $('#c3a').classList.toggle('ok',g.tries.length>0); $('#c3b').classList.toggle('ok',g.minDelta<=0.01+1e-12); $('#c3c').classList.toggle('ok',g.minDelta<=1e-4+1e-15);
+    const ok=g.tries.length>0&&g.minDelta<=1e-4+1e-15; $('#done3').hidden=!ok;
+    if(ok&&!state.done[3]){ state.done[3]=true; renderStepper(); state.notes.m3='(2)：ε = 0.5 に対し，δ を '+sci(g.minDelta,2)+' まで小さくしても負けた（反例は直線 <i>y</i> = ±<i>x</i> 上）'; renderNote(); }
+  }
+  if(st===4){ const g=state.g4;
+    const cur=g.phase==='eps'?0:g.phase==='done'?3:2;
+    $('#turns').innerHTML=turnsHTML(['あなたが ε を決める','相手が δ を出す','あなたが反例を示す'],cur,[g.eps?'ε = '+sci(g.eps,3):'',g.phase==='click'?'δ = '+sci(D4[g.round],2)+'（'+(g.round+1)+' / 5 回目）':g.phase==='done'?'5回とも示せた':'',g.phase==='click'?'円の中をクリック':'']);
+    $('#epsRow').hidden=g.phase!=='eps'; $('#roundBox').hidden=g.phase!=='click';
+    if(g.phase==='click') $('#roundMsg').innerHTML='相手の δ ＝ <b class="m">'+sci(D4[g.round],2)+'</b>．'+(g.round>0?'円が見えるように平面を拡大しました（右下の目盛りに注意）．':'')+'円の中で，赤い斜線の部分（<span class="m">|<i>f</i>| ≥ ε</span>）をクリックしよう．';
+    if(g.phase==='done') showDone4();
+  }
+  if(st===6) update6();
+}
+
+/* ---------- 1・3：ε-δ ゲーム ---------- */
+function curGame(){ return state.step===1?state.g1:state.step===3?state.g3:null; }
+function setDelta(d){ const g=curGame(); if(!g||g.phase==='searching') return;
+  if(state.step===1&&(g.phase==='done'||g.phase==='won')){ const dl=$('#dl'); if(dl) dl.value=Math.log10(g.delta); return; }
+  g.delta=Math.max(1e-6,Math.min(2,d)); g.phase='delta'; g.res=null; $('#gfb').hidden=true;
+  const dl=$('#dl'); if(dl) dl.value=Math.log10(g.delta); updateMissionDyn(); requestDraw(); }
+let searchId=0;
+function judge(){
+  const g=curGame(); if(!g||g.phase==='searching'||(state.step===1&&(g.phase==='won'||g.phase==='done'))) return;
+  const delta=g.delta, eps=epsNow(), f=fnNow(), id=++searchId;
+  g.phase='searching'; updateMissionDyn();
+  const pts=[]; for(let i=0;i<320;i++){ const r=delta*Math.sqrt(Math.random()), th=2*Math.PI*Math.random(); pts.push([r*Math.cos(th),r*Math.sin(th)]); }
+  const fin=()=>{ if(id!==searchId) return; state.search=null; const sc=scanDisk(f,delta); const res={win:sc.best<eps,eps,delta,best:sc.best,bx:sc.bx,by:sc.by,bv:sc.bv}; g.res=res;
+    if(state.step===1){ g.phase=res.win?'won':'lost'; if(res.win) g.wins.push({eps,delta}); }
+    else { g.phase=res.win?'won':'lost'; g.tries.push(res); g.minDelta=Math.min(g.minDelta,delta); }
+    showJudge(res,false); updateMissionDyn(); requestDraw(); };
+  if(reduceMotion.matches){ fin(); return; }
+  state.search={t0:performance.now(),dur:750,pts};
+  const tick=()=>{ if(id!==searchId) return; drawAll(); if(performance.now()-state.search.t0<state.search.dur) requestAnimationFrame(tick); else fin(); };
+  requestAnimationFrame(tick);
+}
+function showJudge(res,restore){
+  const fb=$('#gfb'); if(!fb) return; fb.hidden=false;
+  if(res.win){ fb.className='fb ok'; fb.innerHTML='<p>あなたの勝ち．相手は円の中を調べましたが，反例は見つかりませんでした（円の中の <span class="m">|<i>f</i>|</span> の最大はおよそ '+sci(res.best,3)+' &lt; ε）．</p>';
+    if(state.step===1){ const last=state.g1.round>=EPS1.length-1; $('#nextRow').hidden=last; if(last){ state.g1.phase='done'; state.g1.round=EPS1.length; finish1(); } } }
+  else { fb.className='fb ng'; fb.innerHTML='<p>相手の勝ち．反例 × は点 <span class="m">('+sci(res.bx,3)+', '+sci(res.by,3)+')</span>（原点までの距離 '+sci(Math.hypot(res.bx,res.by),3)+'）で，<span class="m">|<i>f</i>| = '+sci(Math.abs(res.bv),3)+' ≥ ε</span>．'+(state.step===1?'円を小さくして，もう一度勝負しよう．':'')+'</p>'; if(state.step===1) $('#nextRow').hidden=true; }
+}
+function nextRound(){ const g=state.g1; g.round++; g.phase='delta'; g.res=null; $('#gfb').hidden=true; $('#nextRow').hidden=true; heatKey=''; updateMissionDyn(); requestDraw(); }
+function finish1(){
+  if(!state.done[1]){ state.done[1]=true; renderStepper(); }
+  state.notes.m1='練習 (1)：4ラウンド全勝．勝った組 (ε, δ)：'+state.g1.wins.slice(-4).map(w=>'('+sci(w.eps,3)+', '+sci(w.delta,2)+')').join('，');
+  renderNote(); $('#done1').hidden=false;
+}
+
+/* ---------- 2：法則 ---------- */
+function testRule(id,restore){
+  const rule=RULES.find(r=>r.id===id); state.g2.rule=id;
+  $('#mission').querySelectorAll('[data-r]').forEach(b=>b.setAttribute('aria-checked',b.dataset.r===id?'true':'false'));
+  const rows=TESTEPS.map(e=>{ const d=rule.fn(e), sc=scanDisk(FN[1],d); return {eps:e,delta:d,best:sc.best,win:sc.best<e}; });
+  state.g2.rows=rows; const allWin=rows.every(r=>r.win), firstLose=rows.find(r=>!r.win);
+  if(!restore||!state.g2.view){ state.g2.view={eps:rows[0].eps,delta:rows[0].delta}; heatKey=''; animateR(Math.min(R_FULL,Math.max(rows[0].delta*1.6,0.05))); }
+  const fb=$('#rulefb'); $('#ruleRes').hidden=false;
+  const extra={ '2e':'円が大きすぎて，緑の外まで届いてしまいます．', 'sq':'ε が小さくなると √ε は ε よりずっと大きくなり，円が大きすぎます．', 'ee':'ε² でも勝てますが，ε が小さいと必要以上に小さい δ です．大事なのは，ε ごとに勝てる δ を決められることです．', 'e':'実は δ = ε でも勝てます．どこまで大きくできるかは「式で確かめる」の評価を工夫すると分かります．', 'e2':'' }[id];
+  if(allWin){ fb.className='fb ok'; fb.innerHTML='<p>'+rule.label+' で，試したすべての ε に勝てました．'+extra+'</p>'; }
+  else { fb.className='fb ng'; fb.innerHTML='<p>'+rule.label+' では，ε = '+sci(firstLose.eps,3)+' で負けました（円の中の <span class="m">|<i>f</i>|</span> の最大 ≈ '+sci(firstLose.best,3)+' ≥ ε）．'+extra+'</p>'; }
+  renderRuleTable();
+  if(allWin){ $('#why2').hidden=false; $('#go3').hidden=false; if(!state.done[2]){ state.done[2]=true; renderStepper(); } state.notes.m2='法則 (1)：'+rule.label+' とすれば，試したすべての ε で勝てた'; renderNote(); }
+}
+function renderRuleTable(){
+  const rows=state.g2.rows; if(!rows) return; const v=state.g2.view;
+  let h='<tr><th>ε</th><th>δ</th><th>円の中の |f| の最大</th><th>結果</th></tr>';
+  rows.forEach((r,i)=>{ const sel=v&&v.eps===r.eps&&v.delta===r.delta; h+='<tr class="click'+(r.win?'':' lose')+(sel?' sel':'')+'" data-i="'+i+'" tabindex="0"><td class="m">'+sci(r.eps,2)+'</td><td class="m">'+sci(r.delta,2)+'</td><td class="m">'+sci(r.best,3)+'</td><td>'+(r.win?'勝ち':'負け')+'</td></tr>'; });
+  $('#ruletab').innerHTML=h;
+  let w='<tr><th>ε</th><th>勝てた δ</th><th>δ/ε</th></tr>'; const wins=state.g1.wins;
+  if(!wins.length) w+='<tr><td colspan="3" style="text-align:left">まだ記録がありません（1 の練習で勝つと記録されます）</td></tr>';
+  wins.forEach(x=>{ w+='<tr><td class="m">'+sci(x.eps,3)+'</td><td class="m">'+sci(x.delta,3)+'</td><td class="m">'+sci(x.delta/x.eps,3)+'</td></tr>'; });
+  $('#wintab').innerHTML=w; requestDraw();
+}
+
+/* ---------- 4：役割交代 ---------- */
+function setEps(){
+  const v=parseFloat($('#eps0').value), err=$('#eerr');
+  if(!Number.isFinite(v)||v<=0){ err.textContent='ε は正の数で入れてください．'; err.hidden=false; $('#eps0').focus(); return; }
+  Object.assign(state.g4,{eps:v,round:0,pts:[],misses:[],phase:'click',last:null}); heatKey='';
+  updateMissionDyn(); animateR(D4[0]*1.6);
+}
+function click4(w){
+  const g=state.g4, d=D4[g.round], v=FN[2](w.x,w.y), r=Math.hypot(w.x,w.y), fb=$('#clickfb'); fb.hidden=false;
+  if(r>=d){ fb.className='fb ng'; fb.innerHTML='<p>その点は円の外です（原点までの距離 '+sci(r,3)+' ≥ δ）．円の中を選ぼう．</p>'; g.last={x:w.x,y:w.y,v,ok:false}; requestDraw(); return; }
+  if(Math.abs(v)<g.eps){ g.misses.push({x:w.x,y:w.y,round:g.round}); g.last={x:w.x,y:w.y,v,ok:false}; fb.className='fb ng';
+    fb.innerHTML='<p>この点では <span class="m">|<i>f</i>| = '+sci(Math.abs(v),3)+' &lt; ε</span> なので反例になりません．'+(g.eps>=1?'この関数の値の大きさは 1 を超えないので，ε が 1 以上だと反例は作れません．「ε を決め直す」で小さい ε を選ぼう．':'赤い斜線の部分を狙おう．')+'</p>'; requestDraw(); return; }
+  g.pts.push({x:w.x,y:w.y,v,d}); g.last={x:w.x,y:w.y,v,ok:true}; fb.className='fb ok';
+  fb.innerHTML='<p>反例 <span class="m"><i>x</i>'+sub(g.round+1)+' = ('+sci(w.x,3)+', '+sci(w.y,3)+')</span>：原点からの距離 '+sci(r,3)+' &lt; δ で，<span class="m">|<i>f</i>| = '+sci(Math.abs(v),3)+' ≥ ε</span>．</p>';
+  if(g.round>=D4.length-1){ g.phase='done'; updateMissionDyn(); requestDraw(); return; }
+  g.round++; updateMissionDyn(); animateR(D4[g.round]*1.6);
+}
+function showDone4(){
+  const g=state.g4, box=$('#done4'); box.hidden=false;
+  let rows='<tr><th>k</th><th>相手の δ</th><th>|<i>x<sub>k</sub></i>|</th><th><i>f</i>(<i>x<sub>k</sub></i>)</th></tr>';
+  g.pts.forEach((q,i)=>{ rows+='<tr><td>'+(i+1)+'</td><td class="m">'+sci(q.d,2)+'</td><td class="m">'+sci(Math.hypot(q.x,q.y),3)+'</td><td class="m">'+sci(q.v,4)+'</td></tr>'; });
+  box.innerHTML='<p>成功です．あなたが示した点 <span class="m"><i>x</i>₁, …, <i>x</i>₅</span> は原点に近づいていく（<span class="m">|<i>x<sub>k</sub></i>| &lt; δ<sub><i>k</i></sub> → 0</span>）のに，<span class="m">|<i>f</i>(<i>x<sub>k</sub></i>)| ≥ ε</span> のままで <span class="m"><i>f</i>(0, 0) = 0</span> に近づきません．</p><div class="tablewrap"><table>'+rows+'</table></div><p>相手がどんな δ を出しても同じように反例を示せるので，(2) は (0, 0) で連続ではありません．こうして作った点列が，定理1の (A) ⇔ (B)（問題2）で「(B) が成り立たない」ことを示す点列そのものです．</p><div class="row"><button class="btn primary" data-go="5">次へ：結論</button></div>';
+  if(!state.done[4]){ state.done[4]=true; renderStepper(); }
+  state.notes.m4='役割交代 (2)：ε = '+sci(g.eps,3)+' で反例を5つ作れた．|<i>x<sub>k</sub></i>| → 0 なのに |<i>f</i>(<i>x<sub>k</sub></i>)| ≥ ε'; renderNote();
+}
+
+/* ---------- 5：結論 ---------- */
+const FB5={
+  a:{ok:false,h:'<p>(2) では，ε = 0.5 に対してどんな δ でも負けました（3 と 4）．どんな ε にも勝てる δ がとれる，という連続の定義を満たしていません．</p>'},
+  b:{ok:true,h:'<p>そのとおりです．(1) は δ = ε/2 でどんな ε にも勝てました．(2) は ε = 0.5 に対してどんな δ でも反例があり，原点に近づく点列 <span class="m"><i>x<sub>k</sub></i></span> で <span class="m"><i>f</i>(<i>x<sub>k</sub></i>)</span> が 0 に近づきませんでした．</p>'},
+  c:{ok:false,h:'<p>逆になっています．どちらの関数で「どんな ε にも勝てる δ の式」が見つかったか，ノートを見直してみよう．</p>'},
+  d:{ok:false,h:'<p>(1) では δ = ε/2 とすればどんな ε にも勝てました（2 の「式で確かめる」）．これは連続の定義そのものです．</p>'}
+};
+function choose(c){
+  state.choice=c; $('#mission').querySelectorAll('[data-c]').forEach(b=>b.setAttribute('aria-checked',b.dataset.c===c?'true':'false'));
+  const it=FB5[c], fb=$('#fb5'); fb.hidden=false; fb.className='fb '+(it.ok?'ok':'ng'); fb.innerHTML=it.h; $('#formal5').hidden=!it.ok; $('#go6').hidden=!it.ok;
+  if(it.ok){ if(!state.done[5]){ state.done[5]=true; renderStepper(); } state.notes.m5='結論：(1) は (0, 0) で連続，(2) は連続でない'; renderNote(); }
+}
+
+/* ---------- 6：拡大 ---------- */
+function update6(){
+  if(state.step!==6) return; const g=state.g6, z=Math.round(R_FULL/state.R);
+  if(!zoomAnim){ g.seen[g.fn]=Math.max(g.seen[g.fn],z); }
+  $('#mission').querySelectorAll('[data-fn]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.fn===g.fn?'true':'false'));
+  $('#mission').querySelectorAll('[data-z]').forEach(b=>b.setAttribute('aria-pressed',Math.abs(+b.dataset.z-z)<0.5?'true':'false'));
+  $('#c6a').classList.toggle('ok',g.seen[1]>=100); $('#c6b').classList.toggle('ok',g.seen[2]>=100);
+  if(g.seen[1]>=100&&g.seen[2]>=100){ $('#why6').hidden=false; if(!state.done[6]){ state.done[6]=true; renderStepper(); state.notes.m6='拡大：(2) は何倍に拡大しても同じ模様，(1) は 0 の色にそろっていく'; renderNote(); } }
+}
+
+/* ---------- ステッパー・ノート ---------- */
+const STEPS=['練習 (1)','勝ち方の法則','(2) で勝負','役割交代','結論','発展 拡大'];
+function renderStepper(){
+  const ol=$('#stepper'); ol.innerHTML='';
+  STEPS.forEach((t,i)=>{ const st=i+1, li=document.createElement('li'), b=document.createElement('button'); b.type='button';
+    if(state.done[st]) b.classList.add('done'); if(state.step===st) b.setAttribute('aria-current','step');
+    b.innerHTML='<span class="n" aria-hidden="true">'+(state.done[st]?'✓':st)+'</span><span>'+t+'</span>'+(state.done[st]?'<span class="sr">（完了）</span>':'');
+    b.addEventListener('click',()=>goTo(st)); li.appendChild(b); ol.appendChild(li); });
+}
+function renderNote(){
+  const ul=$('#note'), keys=['m1','m2','m3','m4','m5','m6'].filter(k=>state.notes[k]);
+  ul.innerHTML=keys.length?keys.map(k=>'<li>'+state.notes[k]+'</li>').join(''):'<li class="empty">まだ記録はありません．ミッションを進めると，ここに結果が残ります．</li>';
+}
+function goTo(st){
+  searchId++; state.search=null; state.step=st; state.hover=null; heatKey=''; scanKey='';
+  if(st===1||st===3){ const g=curGame(); if(g.phase==='searching') g.phase='delta'; }
+  renderStepper(); renderMission();
+  const target = st===1?Math.max(state.g1.delta*1.25,0.3): st===3?Math.max(Math.min(R_FULL,state.g3.delta*1.6),1e-6): st===4?(state.g4.phase==='click'?D4[state.g4.round]*1.6:R_FULL): st===2&&state.g2.view?Math.min(R_FULL,state.g2.view.delta*1.6): R_FULL;
+  $('#zoomRow').hidden=(st===6||st===5);
+  animateR(Math.min(R_FULL,target));
+  if(window.innerWidth<=900) $('#mission').scrollIntoView({block:'start',behavior:reduceMotion.matches?'auto':'smooth'});
+}
+
+/* ---------- 操作 ---------- */
+function toWorld(e){ const r=plane.getBoundingClientRect(); return {x:-state.R+(e.clientX-r.left)/r.width*2*state.R, y:state.R-(e.clientY-r.top)/r.height*2*state.R}; }
+let dragging=false;
+function handlePointer(e,isDown){
+  const w=toWorld(e), st=state.step;
+  if(st===1||st===3){ const g=curGame(); if(g.phase==='searching'||(st===1&&(g.phase==='won'||g.phase==='done'))) return; setDelta(Math.hypot(w.x,w.y)); }
+  else if(st===4&&isDown&&state.g4.phase==='click') click4(w);
+}
+plane.addEventListener('pointerdown',(e)=>{ plane.setPointerCapture(e.pointerId); dragging=true; handlePointer(e,true); if(e.pointerType!=='mouse'){ state.hover=toWorld(e); updateMeter(); } });
+plane.addEventListener('pointermove',(e)=>{ if(dragging&&(state.step===1||state.step===3)) handlePointer(e,false); if(e.pointerType==='mouse'||dragging){ state.hover=toWorld(e); updateMeter(); } });
+plane.addEventListener('pointerup',()=>{ dragging=false; });
+plane.addEventListener('pointercancel',()=>{ dragging=false; });
+plane.addEventListener('pointerleave',(e)=>{ if(e.pointerType==='mouse'){ state.hover=null; updateMeter(); } });
+plane.addEventListener('keydown',(e)=>{ if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) return; const g=curGame(); if(!g) return; e.preventDefault();
+  setDelta(g.delta*((e.key==='ArrowUp'||e.key==='ArrowRight')?1.1:1/1.1)); });
+
+let zoomId=0;
+function animateR(target){
+  target=Math.max(1e-7,Math.min(R_FULL*1.2,target)); const id=++zoomId;
+  if(reduceMotion.matches||Math.abs(Math.log10(target/state.R))<1e-3){ state.R=target; zoomAnim=false; heatKey=''; requestDraw(); return; }
+  const a=Math.log10(state.R), b=Math.log10(target), t0=performance.now(), dur=Math.min(900,350+120*Math.abs(b-a)); zoomAnim=true;
+  const step=(now)=>{ if(id!==zoomId) return; let u=Math.min(1,(now-t0)/dur); u=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    state.R=Math.pow(10,a+(b-a)*u); heatKey=''; if(u>=1){ zoomAnim=false; state.R=target; heatKey=''; }
+    drawAll(); if(u<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+$('#zfull').addEventListener('click',()=>animateR(R_FULL));
+$('#zdelta').addEventListener('click',()=>{ const d=deltaNow(); if(d) animateR(d*1.6); });
+
+/* ---------- 描画 ---------- */
+let pending=false;
+function requestDraw(){ if(pending) return; pending=true; requestAnimationFrame(()=>{ pending=false; drawAll(); }); }
+function drawAll(){ drawPlane(); updateMeter(); updateKeys(); drawRange(); if(state.step===6) update6(); }
+
+readTheme(); sizePlane(); renderStepper(); renderMission(); renderNote(); state.R=Math.max(state.g1.delta*1.25,0.3); requestDraw();
+new ResizeObserver(()=>{ sizePlane(); requestDraw(); }).observe($('#planewrap'));
+new ResizeObserver(()=>requestDraw()).observe($('#mission'));
+const mq=window.matchMedia('(prefers-color-scheme: dark)'); const onTheme=()=>{ readTheme(); heatKey=''; requestDraw(); };
+if(mq.addEventListener) mq.addEventListener('change',onTheme); else if(mq.addListener) mq.addListener(onTheme);
+new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestDraw());
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>原点への近づき方ラボ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400;1,600&display=swap">
+<style>
+:root{
+  --paper:#F3F5F1; --sheet:#FFFFFF; --ink:#1F2A44; --muted:#5B6476; --line:#CAD4D0;
+  --blue:#2F6FB0; --red:#C8323C;
+  --heat-lo:#6A4C9C; --heat-mid:#F8F8F2; --heat-hi:#1E7A6A;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#151C1B; --sheet:#1D2625; --ink:#E3E9E5; --muted:#9AA6A1; --line:#34413D;
+    --blue:#82B6FF; --red:#FF7070;
+    --heat-lo:#A288E2; --heat-mid:#1D2625; --heat-hi:#47C9AA;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#151C1B; --sheet:#1D2625; --ink:#E3E9E5; --muted:#9AA6A1; --line:#34413D;
+  --blue:#82B6FF; --red:#FF7070;
+  --heat-lo:#A288E2; --heat-mid:#1D2625; --heat-hi:#47C9AA;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+.m{font-family:"STIX Two Text","Cambria Math","Times New Roman",serif;font-size:1.08em;white-space:nowrap}
+.m i{font-style:italic}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.12;margin:0 .1em}
+.frac>span:first-child{border-bottom:1px solid currentColor;padding:0 .25em .05em}
+.frac>span:last-child{padding:.05em .25em 0}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header.wrap{padding-top:26px}
+h1{font-size:clamp(1.45rem,1.05rem + 1.3vw,2.05rem);line-height:1.3;margin:0;font-weight:700;letter-spacing:.01em}
+.lede{margin:.35em 0 0;color:var(--muted);max-width:44em}
+.fnbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;margin-bottom:20px}
+.fnbtn{font:inherit;color:var(--ink);background:var(--sheet);border:1px solid var(--line);border-radius:8px;
+  padding:6px 14px 8px;cursor:pointer;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:3px;min-height:62px}
+.fnbtn .tag{font-size:12px;color:var(--muted);line-height:1.2}
+.fnbtn .m{font-size:17px;line-height:1.2}
+.fnbtn[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.lab{display:grid;grid-template-columns:minmax(0,600px) minmax(0,1fr);gap:28px;align-items:start;padding-bottom:36px}
+@media (max-width:920px){.lab{grid-template-columns:minmax(0,1fr)}}
+.planewrap{position:relative;width:100%;max-width:600px;aspect-ratio:1/1;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--sheet)}
+#plane{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.under{max-width:600px;margin-top:10px;display:grid;gap:10px}
+.meter{background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:10px 14px 12px}
+.mtop{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:4px 16px}
+.mlabel{font-size:13px;color:var(--muted)}
+.mval{font-size:34px;line-height:1.15;font-weight:600}
+.mside{font-size:13px;color:var(--muted);text-align:right;line-height:1.6}
+.mside .in{color:var(--blue);font-weight:700}
+.mside .out{color:var(--red);font-weight:700}
+#cbar{width:100%;height:22px;display:block;margin-top:8px}
+.cblabels{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;font-size:12.5px;color:var(--muted)}
+.cblabels b{color:var(--ink);font-weight:700}
+.keys{list-style:none;margin:0;padding:0 2px;display:grid;gap:3px;font-size:13px;color:var(--muted)}
+.keys li{display:flex;align-items:center;gap:8px}
+.k{flex:0 0 26px;height:14px;display:inline-block;position:relative}
+.k-line::after{content:"";position:absolute;left:0;right:0;top:6px;border-top:2.5px solid var(--c)}
+.k-thin::after{content:"";position:absolute;left:0;right:0;top:7px;border-top:1px solid var(--muted)}
+.k-dash::after{content:"";position:absolute;left:5px;top:-1px;width:16px;height:16px;border:2px dashed var(--blue);border-radius:50%}
+.k-ring::after{content:"";position:absolute;left:8px;top:2px;width:10px;height:10px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.k-dot::after{content:"";position:absolute;left:8px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--c)}
+.k-hatch{background:repeating-linear-gradient(45deg,var(--red) 0 2px,transparent 2px 6px);border:1px solid var(--red);border-radius:2px}
+.k-gray{background:var(--line);border-radius:2px}
+.k-frame{border:2px solid var(--blue);border-radius:2px}
+.k-scale::after{content:"";position:absolute;left:2px;right:2px;top:4px;height:6px;border:2px solid var(--ink);border-top:none}
+.k-cross::after{content:"×";position:absolute;left:7px;top:-6px;color:var(--red);font-weight:700;font-size:18px}
+.zoomrow{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:14px}
+.zoomrow output{font-family:"STIX Two Text",serif;min-width:6.5em;display:inline-block}
+.panel{min-width:0}
+.Lrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;background:var(--sheet);border:1px solid var(--line);border-radius:8px}
+.Lrow label{display:flex;align-items:center;gap:8px}
+.Lrow input{font-family:"STIX Two Text",serif;font-size:18px;width:8.5em;padding:2px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink)}
+.Lrow .note{font-size:13px;color:var(--muted)}
+.fnhint{margin:10px 2px 12px;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
+.tabs button{font:inherit;font-size:14px;line-height:1.45;background:none;border:1px solid transparent;border-bottom:none;border-radius:8px 8px 0 0;
+  padding:8px 10px;color:var(--muted);cursor:pointer;margin-bottom:-1px;flex:1 1 0;min-width:0;text-wrap:balance}
+.tabs button[aria-selected="true"]{color:var(--ink);background:var(--sheet);border-color:var(--line);font-weight:700}
+.tabpanel{background:var(--sheet);border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:14px 16px 16px}
+.tabpanel[hidden]{display:none}
+.tabpanel p{margin:0 0 8px}
+.chart{display:block;width:100%}
+#pathChart{height:230px}
+#strip{height:120px}
+#polarChart{height:250px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+button.act{font:inherit;font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:4px 12px;cursor:pointer;line-height:1.6}
+button.act:hover{border-color:var(--ink)}
+button.act.primary{background:var(--ink);color:var(--sheet);border-color:var(--ink);font-weight:700}
+button.act:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.sliders{display:grid;gap:4px;margin:4px 0 10px}
+.slider{display:grid;grid-template-columns:5.8em 1fr 4.2em;align-items:center;gap:10px;font-size:14px}
+.slider output{font-family:"STIX Two Text",serif;text-align:right}
+input[type=range]{width:100%;accent-color:var(--blue)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.verdict{border-left:3px solid var(--line);padding:6px 12px;margin:10px 0;font-size:14px;min-height:2.6em}
+.verdict.win{border-color:var(--blue)}
+.verdict.lose{border-color:var(--red)}
+.round{display:flex;flex-wrap:wrap;gap:4px 18px;align-items:baseline;font-size:15px;margin-bottom:6px}
+.round b{font-size:18px}
+.cap{font-size:13px;color:var(--muted);margin:4px 0 0}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px}
+ol.log{margin:8px 0 0;padding-left:1.6em;font-size:13px;color:var(--muted);max-height:9.5em;overflow:auto}
+ol.log li.lose{color:var(--red)}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:13.5px;margin-top:8px}
+th,td{padding:3px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-weight:700;color:var(--muted)}
+.sw{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+ul.saved{list-style:none;margin:6px 0 0;padding:0;font-size:14px}
+ul.saved li{padding:2px 0}
+footer.wrap{color:var(--muted);font-size:13px;padding-bottom:28px;max-width:60em;margin-left:auto;margin-right:auto}
+footer p{margin:.4em 0}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <h1>原点への近づき方ラボ</h1>
+  <p class="lede">2変数関数の <span class="m">(<i>x</i>, <i>y</i>) → (0, 0)</span> での極限を，経路・ε-δ の対戦・極座標の3つの見方で確かめます．</p>
+  <div class="fnbar" id="fnbar" role="group" aria-label="関数を選ぶ"></div>
+</header>
+
+<main class="wrap lab">
+  <section aria-label="定義域の平面">
+    <div class="planewrap" id="planewrap"><canvas id="plane" aria-label="原点付近での関数の値の濃淡図"></canvas></div>
+    <div class="under">
+      <div class="meter">
+        <div class="mtop">
+          <div><div class="mlabel" id="mwhat"></div><div class="mval m" id="mval">—</div></div>
+          <div class="mside" id="mside"></div>
+        </div>
+        <canvas id="cbar" aria-hidden="true"></canvas>
+        <div class="cblabels"><span id="cbmin"></span><span><b>色 ＝ その点での <i>f</i> の値</b>（▲ は上の点の値）</span><span id="cbmax"></span></div>
+      </div>
+      <ul class="keys" id="keys" aria-label="平面の見方"></ul>
+      <div class="zoomrow">
+        <label for="Rlog">表示範囲 <span class="m">[−<i>R</i>, <i>R</i>]²</span></label>
+        <input type="range" id="Rlog" min="-6" max="0.4" step="0.01" value="0.18">
+        <output id="Rout" for="Rlog"></output>
+      </div>
+      <div class="row" style="margin:0">
+        <button class="act" id="zin">10倍に拡大</button>
+        <button class="act" id="zout">10分の1に縮小</button>
+        <button class="act" id="zreset">最初の表示に戻す</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="操作パネル">
+    <div class="Lrow">
+      <label for="L">予想する極限値 <span class="m"><i>L</i> =</span><input id="L" type="number" step="0.001" value="0" inputmode="decimal"></label>
+      <span class="note" id="Lnote">「道によって行き先は変わる？」で見当をつけてから入れると楽です．</span>
+    </div>
+    <p class="fnhint" id="fnhint"></p>
+
+    <div class="tabs" role="tablist" aria-label="見方を選ぶ">
+      <button role="tab" id="t-path" aria-controls="p-path" aria-selected="true">道によって行き先は変わる？</button>
+      <button role="tab" id="t-game" aria-controls="p-game" aria-selected="false" tabindex="-1">ε-δ で決着をつける</button>
+      <button role="tab" id="t-polar" aria-controls="p-polar" aria-selected="false" tabindex="-1">どの向きからでも同じように近づく？</button>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="p-path" aria-labelledby="t-path">
+      <p>経路 <span class="m">γ(<i>t</i>) = (<i>a t</i><sup>α</sup>, <i>b t</i><sup>β</sup>)</span> に沿って <span class="m"><i>t</i> → +0</span> とします．</p>
+      <div class="presets" id="presets"></div>
+      <div class="sliders">
+        <div class="slider"><label for="pa"><span class="m"><i>a</i></span></label><input type="range" id="pa" min="-2" max="2" step="0.05" value="1"><output id="pao"></output></div>
+        <div class="slider"><label for="pal"><span class="m">α</span></label><input type="range" id="pal" min="0.25" max="4" step="0.05" value="1"><output id="palo"></output></div>
+        <div class="slider"><label for="pb"><span class="m"><i>b</i></span></label><input type="range" id="pb" min="-2" max="2" step="0.05" value="1"><output id="pbo"></output></div>
+        <div class="slider"><label for="pbe"><span class="m">β</span></label><input type="range" id="pbe" min="0.25" max="4" step="0.05" value="1"><output id="pbeo"></output></div>
+      </div>
+      <canvas class="chart" id="pathChart" aria-label="経路に沿った関数の値のグラフ"></canvas>
+      <p class="cap">横軸は <span class="m"><i>t</i></span> の対数目盛．右へ行くほど原点に近い．破線は <span class="m"><i>L</i></span>．</p>
+      <div class="slider" style="margin-top:8px"><label for="ts"><span class="m"><i>t</i></span> を動かす</label><input type="range" id="ts" min="0" max="8" step="0.01" value="1"><output id="tso"></output></div>
+      <p id="pathOut" style="margin-top:8px"></p>
+      <div class="row">
+        <button class="act" id="keep">この経路を残す</button>
+        <button class="act" id="useL">この値を L にする</button>
+        <button class="act" id="clearPaths">残した経路を消す</button>
+      </div>
+      <ul class="saved" id="saved"></ul>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="p-game" aria-labelledby="t-game" hidden>
+      <p>相手（コンピュータ）が ε を出し，あなたが δ を選びます．相手は穴あき円板 <span class="m">0 &lt; |<i>x</i>| &lt; δ</span> の中から <span class="m">|<i>f</i>(<i>x</i>) − <i>L</i>| ≥ ε</span> となる点を探し，見つかれば相手の勝ちです．</p>
+      <div class="round"><span>ラウンド <b id="rnum">1</b> / <span id="rtot"></span></span><span>相手の ε = <b class="m" id="epsOut"></b></span></div>
+      <div class="slider"><label for="dlog">あなたの δ</label><input type="range" id="dlog" min="-6" max="0" step="0.01" value="-0.3"><output id="dOut"></output></div>
+      <div class="row" style="margin:6px 0 0"><button class="act" id="zdelta">δ 円が見える大きさまで拡大</button><span class="cap" style="align-self:center;margin:0">δ を変えても平面の縮尺は変わりません．長さは平面右下の目盛りで確かめられます．</span></div>
+      <div class="row">
+        <button class="act primary" id="judge">この δ で勝負する</button>
+        <button class="act" id="seqBtn">δ を半分ずつにして反例を集める</button>
+        <button class="act" id="resetGame">ラウンド1に戻る</button>
+      </div>
+      <div class="verdict" id="verdict" aria-live="polite">平面の赤い斜線は <span class="m">|<i>f</i> − <i>L</i>| ≥ ε</span> となる点です．δ 円板がこれを避けられれば勝ちです．</div>
+      <canvas class="chart" id="strip" aria-label="円板内で f がとる値の分布"></canvas>
+      <p class="cap">青い帯が <span class="m"><i>U</i>(<i>L</i>; ε)</span>，棒グラフが <span class="m"><i>f</i>(<i>U</i>(0; δ) ∖ {0})</span> の値の分布です．帯からはみ出た棒は赤．</p>
+      <ol class="log" id="log"></ol>
+      <div id="seqOut"></div>
+    </div>
+
+    <div class="tabpanel" role="tabpanel" id="p-polar" aria-labelledby="t-polar" hidden>
+      <p><span class="m"><i>x</i> = <i>r</i> cos θ, <i>y</i> = <i>r</i> sin θ</span> とおき，半径 <span class="m"><i>r</i></span> の円周上の値を θ の関数として重ねて描きます．</p>
+      <canvas class="chart" id="polarChart" aria-label="円周上の値のグラフ"></canvas>
+      <div class="tablewrap"><table id="supTable"></table></div>
+      <p class="cap"><span class="m"><i>M</i>(<i>r</i>) = sup<sub>θ</sub> |<i>f</i>(<i>r</i> cos θ, <i>r</i> sin θ) − <i>L</i>|</span> とすると，<span class="m">lim <i>f</i> = <i>L</i></span> ⇔ <span class="m"><i>M</i>(<i>r</i>) → 0</span>（<span class="m"><i>r</i> → +0</span>）．各 θ ごとに収束するだけでは足りず，θ について一様に縮むことが要ります．</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>コンピュータは有限個の点しか調べないので，ゲームに勝っても証明にはなりません．反例が「どこに」潜んでいるか，δ を ε の式でどう書けば勝ち続けられるかを考える材料として使ってください．</p>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const SUPC = {'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+const sup = (e) => String(e).split('').map(c => SUPC[c] || c).join('');
+function strip0(s){ if(s.indexOf('.')>=0){ s=s.replace(/0+$/,'').replace(/\.$/,''); } return s.replace(/^-/,'−'); }
+function sci(v, d=3){
+  if(!Number.isFinite(v)) return '—';
+  if(v===0) return '0';
+  const a=Math.abs(v); let e=Math.floor(Math.log10(a));
+  if(e>=-3 && e<4) return strip0(v.toFixed(Math.max(0,d-1-e)));
+  let m=v/Math.pow(10,e); let ms=strip0(m.toFixed(d-1));
+  if(ms==='10'||ms==='−10'){ e+=1; ms = ms[0]==='−'?'−1':'1'; }
+  const pre = ms==='1' ? '' : ms==='−1' ? '−' : ms+' × ';
+  return pre+'10'+sup(e);
+}
+const frac = (n,d) => `<span class="frac"><span>${n}</span><span>${d}</span></span>`;
+
+/* ---------- 関数一覧 ---------- */
+const FUNS = [
+  { id:'p1', tag:'問題1', html:frac('2<i>x</i>³ + 3<i>y</i>²','<i>x</i>² + <i>y</i>²'),
+    f:(x,y)=>{const r2=x*x+y*y; return r2===0?NaN:(2*x*x*x+3*y*y)/r2;},
+    vmin:-0.5, vmax:3.5, step:0.25,
+    hint:'まず (<i>t</i>, <i>t</i>) と (<i>t</i>, <i>t</i><sup>3/2</sup>) を比べ，次に直線 <i>y</i> = <i>kx</i> をいくつか試そう．平面を拡大すると模様は消える？ 残る？' },
+  { id:'p3b', tag:'問題3(2)', html:'<i>x</i> sin(1/<i>y</i>) + sin(1/<i>x</i>)',
+    f:(x,y)=> (x===0||y===0)?NaN : x*Math.sin(1/y)+Math.sin(1/x),
+    vmin:-2, vmax:2, step:0,
+    hint:'<i>xy</i> = 0 では定義されないので定義域は <i>xy</i> ≠ 0 と考える（灰色は定義外）．拡大しても縞が細かくなるだけ？ どちらの項が悪さをしている？' },
+  { id:'p3d', tag:'問題3(4)', html:'(1 + <i>x</i>² + <i>y</i>²)<sup>1/(<i>x</i>² + <i>y</i>²)</sup>',
+    f:(x,y)=>{const r2=x*x+y*y; return r2===0?NaN:Math.exp(Math.log1p(r2)/r2);},
+    vmin:1, vmax:3, step:0.1,
+    hint:'値は <i>r</i> = |(<i>x</i>, <i>y</i>)| だけで決まる．経路で見つけた値を <i>L</i> に入れて「ε-δ で決着をつける」へ．勝てた δ を記録して，δ を ε の式で予想してみよう．' },
+  { id:'p4a', tag:'問題4(1)', html:frac('2<i>x</i>²<i>y</i>','<i>x</i>² + <i>y</i>²'),
+    f:(x,y)=>{const r2=x*x+y*y; return r2===0?0:2*x*x*y/r2;},
+    vmin:-0.8, vmax:0.8, step:0.1,
+    hint:'<i>f</i>(0, 0) = 0 と定める．連続性は「<i>L</i> = 0 で ε-δ ゲームに勝ち続けられるか」と同じ．拡大すると何が起きる？' },
+  { id:'p4b', tag:'問題4(2)', html:frac('2<i>xy</i>','<i>x</i>² + <i>y</i>²'),
+    f:(x,y)=>{const r2=x*x+y*y; return r2===0?0:2*x*y/r2;},
+    vmin:-1, vmax:1, step:0.2,
+    hint:'<i>f</i>(0, 0) = 0 と定める．直線 <i>y</i> = <i>kx</i> に沿うと値は？ 平面を何倍に拡大しても同じ模様に見えるのはなぜ？' },
+  { id:'ex', tag:'発展', html:frac('<i>x</i>²<i>y</i>','<i>x</i>⁴ + <i>y</i>²'),
+    f:(x,y)=>{const d=x*x*x*x+y*y; return d===0?NaN:x*x*y/d;},
+    vmin:-0.5, vmax:0.5, step:0.1,
+    hint:'どの直線に沿っても <i>t</i> → +0 で 0 になる．それでも極限が 0 と言えない理由を，「道によって行き先は変わる？」と「どの向きからでも同じように近づく？」の2つの画面で探そう．' },
+];
+
+const EPS=[0.5,0.2,0.1,0.05,0.02,0.01,0.005,0.001];
+const SAVE_COLS=['#C98A00','#B8337A','#8A5A2B','#3D6E8F'];
+const RS=[1,1e-1,1e-2,1e-3,1e-4];
+
+const state = {
+  fn: FUNS[0], R: Math.pow(10,0.18), L: 0, tab:'path',
+  path:{a:1,al:1,b:1,be:1}, s:1, saved:[],
+  round:0, delta:Math.pow(10,-0.3), hover:null, anim:false,
+  counter:null, seq:[], last:null, attempts:[]
+};
+
+/* ---------- テーマ ---------- */
+let C={}, themeVer=0;
+function hexToRgb(h){ h=h.trim().replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+function readTheme(){
+  const cs=getComputedStyle(document.documentElement);
+  for(const k of ['paper','sheet','ink','muted','line','blue','red','heat-lo','heat-mid','heat-hi']) C[k]=hexToRgb(cs.getPropertyValue('--'+k));
+  themeVer++;
+}
+const rgba=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const FONT='"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI",sans-serif';
+const MFONT='"STIX Two Text","Times New Roman",serif';
+
+/* ---------- 平面 ---------- */
+const plane=$('#plane'), pctx=plane.getContext('2d');
+const heat=document.createElement('canvas'), hctx=heat.getContext('2d');
+let size=500, dpr=1, NFULL=500, heatKey='';
+const X=(x)=>(x+state.R)/(2*state.R)*size;
+const Y=(y)=>(state.R-y)/(2*state.R)*size;
+
+function sizePlane(){
+  const w=$('#planewrap').clientWidth || 500;
+  size=w; dpr=Math.min(window.devicePixelRatio||1,2);
+  plane.width=Math.round(size*dpr); plane.height=Math.round(size*dpr);
+  NFULL=Math.min(560, Math.max(200, Math.round(size)));
+  heatKey='';
+}
+function curEps(){ return EPS[Math.min(state.round, EPS.length-1)]; }
+
+function renderHeat(){ renderHeatAt(state.anim?Math.min(220,NFULL):NFULL); }
+function renderHeatAt(N){
+  const fn=state.fn, R=state.R, danger=(state.tab==='game');
+  const eps=curEps(), L=state.L;
+  const key=[fn.id,R,N,danger?L:'',danger?eps:'',themeVer].join('|');
+  if(key===heatKey) return;
+  heatKey=key;
+  if(heat.width!==N){ heat.width=N; heat.height=N; }
+  const img=hctx.createImageData(N,N), d=img.data;
+  const vals=new Float64Array(N*N), h=2*R/N;
+  for(let j=0;j<N;j++){ const y=R-(j+0.5)*h; for(let i=0;i<N;i++){ vals[j*N+i]=fn.f(-R+(i+0.5)*h,y); } }
+  const lo=C['heat-lo'], mid=C['heat-mid'], hi=C['heat-hi'], ink=C.ink, red=C.red, gray=C.line;
+  const vmin=fn.vmin, span=fn.vmax-fn.vmin, step=fn.step;
+  for(let j=0;j<N;j++){
+    for(let i=0;i<N;i++){
+      const k=j*N+i, v=vals[k], p=k*4;
+      let r,g,b;
+      if(!Number.isFinite(v)){ r=gray[0]; g=gray[1]; b=gray[2]; }
+      else{
+        let t=(v-vmin)/span; t=t<0?0:t>1?1:t;
+        if(t<0.5){ const s=t*2; r=lo[0]+(mid[0]-lo[0])*s; g=lo[1]+(mid[1]-lo[1])*s; b=lo[2]+(mid[2]-lo[2])*s; }
+        else{ const s=(t-0.5)*2; r=mid[0]+(hi[0]-mid[0])*s; g=mid[1]+(hi[1]-mid[1])*s; b=mid[2]+(hi[2]-mid[2])*s; }
+        if(step>0){
+          const lv=Math.floor((v-vmin)/step);
+          const vr=i<N-1?vals[k+1]:v, vd=j<N-1?vals[k+N]:v;
+          if((Number.isFinite(vr)&&Math.floor((vr-vmin)/step)!==lv)||(Number.isFinite(vd)&&Math.floor((vd-vmin)/step)!==lv)){
+            r+= (ink[0]-r)*0.3; g+=(ink[1]-g)*0.3; b+=(ink[2]-b)*0.3;
+          }
+        }
+        if(danger && Math.abs(v-L)>=eps){
+          const s=(((i+j)%8)<2)?0.6:0.16;
+          r+=(red[0]-r)*s; g+=(red[1]-g)*s; b+=(red[2]-b)*s;
+        }
+      }
+      d[p]=r; d[p+1]=g; d[p+2]=b; d[p+3]=255;
+    }
+  }
+  hctx.putImageData(img,0,0);
+}
+
+function niceStep(raw){ const e=Math.floor(Math.log10(raw)); const b=Math.pow(10,e); const m=raw/b; return (m<=1.0001?1:m<=2.0001?2:m<=5.0001?5:10)*b; }
+
+function drawGrid(){
+  const ctx=pctx, R=state.R, major=niceStep(R/3), minor=major/5;
+  const lines=(stepv, col, w)=>{
+    ctx.strokeStyle=col; ctx.lineWidth=w; ctx.beginPath();
+    const k0=Math.ceil(-R/stepv), k1=Math.floor(R/stepv);
+    for(let k=k0;k<=k1;k++){ const v=k*stepv; const px=Math.round(X(v))+0.5, py=Math.round(Y(v))+0.5;
+      ctx.moveTo(px,0); ctx.lineTo(px,size); ctx.moveTo(0,py); ctx.lineTo(size,py); }
+    ctx.stroke();
+  };
+  lines(minor, rgba(C.ink,0.07), 1);
+  lines(major, rgba(C.ink,0.2), 1);
+  ctx.strokeStyle=rgba(C.ink,0.6); ctx.lineWidth=1.2; ctx.beginPath();
+  const ox=Math.round(X(0))+0.5, oy=Math.round(Y(0))+0.5;
+  ctx.moveTo(ox,0); ctx.lineTo(ox,size); ctx.moveTo(0,oy); ctx.lineTo(size,oy); ctx.stroke();
+  ctx.font='11px '+FONT; ctx.textBaseline='alphabetic';
+  const k0=Math.ceil(-R/major), k1=Math.floor(R/major);
+  for(let k=k0;k<=k1;k++){
+    if(k===0) continue; const v=k*major, txt=sci(v,2);
+    const px=X(v), py=Y(v);
+    labelBox(txt, px+3, size-6, 'left');
+    labelBox(txt, 4, py-4, 'left');
+  }
+}
+function labelBox(txt,x,y,align){
+  const ctx=pctx; ctx.textAlign=align;
+  const w=ctx.measureText(txt).width;
+  ctx.fillStyle=rgba(C.sheet,0.78); ctx.fillRect(align==='left'?x-2:x-w-2, y-11, w+4, 14);
+  ctx.fillStyle=rgba(C.muted,1); ctx.fillText(txt,x,y);
+}
+
+function gammaPt(p,t){ return [p.a*Math.pow(t,p.al), p.b*Math.pow(t,p.be)]; }
+function strokePath(p,col,w){
+  const ctx=pctx; ctx.beginPath(); let started=false;
+  for(let k=0;k<=700;k++){ const t=Math.pow(10,-12*k/700); const [x,y]=gammaPt(p,t); const px=X(x), py=Y(y);
+    if(!started){ ctx.moveTo(px,py); started=true; } else ctx.lineTo(px,py); }
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.strokeStyle=rgba(C.sheet,0.85); ctx.lineWidth=w+3; ctx.stroke();
+  ctx.strokeStyle=col; ctx.lineWidth=w; ctx.stroke();
+}
+function dot(x,y,rad,fill,ring){ const ctx=pctx; ctx.beginPath(); ctx.arc(x,y,rad,0,2*Math.PI); ctx.fillStyle=fill; ctx.fill(); if(ring){ ctx.lineWidth=2; ctx.strokeStyle=ring; ctx.stroke(); } }
+function cross(x,y,s,col){ const ctx=pctx; ctx.lineCap='round';
+  ctx.strokeStyle=rgba(C.sheet,0.9); ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(x-s,y-s); ctx.lineTo(x+s,y+s); ctx.moveTo(x+s,y-s); ctx.lineTo(x-s,y+s); ctx.stroke();
+  ctx.strokeStyle=col; ctx.lineWidth=2.4; ctx.stroke(); }
+
+function drawPlane(){
+  renderHeat();
+  const ctx=pctx;
+  ctx.setTransform(1,0,0,1,0,0); ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(heat,0,0,plane.width,plane.height);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawGrid();
+  const blue=rgba(C.blue,1), red=rgba(C.red,1);
+  if(state.tab==='path'){
+    state.saved.forEach(s=>strokePath(s.p,s.col,1.8));
+    strokePath(state.path, blue, 2.4);
+    const [x,y]=gammaPt(state.path, Math.pow(10,-state.s));
+    dot(X(x),Y(y),5,blue,rgba(C.sheet,1));
+  } else if(state.tab==='game'){
+    const r=state.delta/(2*state.R)*size;
+    ctx.beginPath(); ctx.arc(X(0),Y(0),r,0,2*Math.PI);
+    ctx.fillStyle=rgba(C.blue,0.1); ctx.fill();
+    ctx.setLineDash([6,4]); ctx.lineWidth=2; ctx.strokeStyle=blue; ctx.stroke(); ctx.setLineDash([]);
+    if(r<12){ ctx.beginPath(); ctx.arc(X(0),Y(0),16,0,2*Math.PI); ctx.setLineDash([2,2]); ctx.lineWidth=1.5; ctx.strokeStyle=blue; ctx.stroke(); ctx.setLineDash([]);
+      planeMsgText='δ 円が小さすぎて見えません（原点のまわりの点線の内側にあります）．「δ 円が見える大きさまで拡大」を押してください．'; }
+    else if(state.delta>state.R*1.42) planeMsgText='δ 円は画面全体を覆っています．縮小すると円周が見えます．';
+    if(state.seq.length){
+      ctx.beginPath(); state.seq.forEach((q,i)=>{ const px=X(q.x),py=Y(q.y); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+      ctx.strokeStyle=rgba(C.red,0.55); ctx.lineWidth=1.2; ctx.stroke();
+      state.seq.forEach((q,i)=>{ const px=X(q.x),py=Y(q.y); dot(px,py,3.6,red,rgba(C.sheet,1));
+        if(i<5){ ctx.font='italic 13px '+MFONT; ctx.textAlign='left'; ctx.fillStyle=rgba(C.sheet,0.85);
+          const t='x'+String(i+1).split('').map(c=>'₀₁₂₃₄₅₆₇₈₉'[+c]).join('');
+          ctx.fillRect(px+5,py-16,ctx.measureText(t).width+4,15); ctx.fillStyle=red; ctx.fillText(t,px+7,py-4); } });
+    }
+    if(state.counter){ const px=X(state.counter.x), py=Y(state.counter.y); cross(px,py,7,red);
+      ctx.font='13px '+FONT; ctx.textAlign='left'; const t='反例'; const w=ctx.measureText(t).width;
+      const lx=Math.min(px+10,size-w-6), ly=Math.max(py-10,16);
+      ctx.fillStyle=rgba(C.sheet,0.88); ctx.fillRect(lx-3,ly-13,w+6,18); ctx.fillStyle=red; ctx.fillText(t,lx,ly); }
+  } else {
+    RS.forEach((r,idx)=>{ if(r<state.R*1.5 && r>state.R*0.004){ ctx.beginPath(); ctx.arc(X(0),Y(0),r/(2*state.R)*size,0,2*Math.PI);
+      ctx.strokeStyle=rgba(C.blue,0.35+0.15*idx); ctx.lineWidth=1.6; ctx.stroke(); } });
+  }
+  dot(X(0),Y(0),4,rgba(C.sheet,1),rgba(C.ink,1));
+  drawScaleBar();
+  if(planeMsgText){ planeNote(planeMsgText); planeMsgText=''; }
+}
+let planeMsgText='';
+function planeNote(text){
+  const ctx=pctx; ctx.font='13px '+FONT; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+  const maxW=size-56, lines=[]; let cur='';
+  for(const ch of text){ if(ctx.measureText(cur+ch).width>maxW){ lines.push(cur); cur=ch; } else cur+=ch; }
+  if(cur) lines.push(cur);
+  const lh=19, w=Math.max(...lines.map(l=>ctx.measureText(l).width))+20, h=lines.length*lh+12, x0=(size-w)/2, y0=12;
+  ctx.fillStyle=rgba(C.sheet,0.94); ctx.fillRect(x0,y0,w,h); ctx.strokeStyle=rgba(C.blue,0.85); ctx.lineWidth=1; ctx.strokeRect(x0+0.5,y0+0.5,w-1,h-1);
+  ctx.fillStyle=rgba(C.ink); lines.forEach((l,i)=>ctx.fillText(l,x0+10,y0+lh*(i+1)));
+}
+function niceFloor(raw){ const e=Math.floor(Math.log10(raw)); const b=Math.pow(10,e); const m=raw/b; return (m>=4.9999?5:m>=1.9999?2:1)*b; }
+function drawScaleBar(){
+  const ctx=pctx, len=niceFloor(state.R/2), px=len/(2*state.R)*size, x1=size-16, x0=x1-px, y=size-34;
+  ctx.font='12px '+FONT; const txt='この長さ ＝ '+sci(len,2), tw=ctx.measureText(txt).width;
+  const bx=Math.min(x0,x1-tw)-8;
+  ctx.fillStyle=rgba(C.sheet,0.9); ctx.fillRect(bx,y-24,x1-bx+8,34);
+  ctx.strokeStyle=rgba(C.ink); ctx.lineWidth=2; ctx.lineCap='butt'; ctx.beginPath(); ctx.moveTo(x0,y-5); ctx.lineTo(x0,y+2); ctx.lineTo(x1,y+2); ctx.lineTo(x1,y-5); ctx.stroke();
+  ctx.fillStyle=rgba(C.ink); ctx.textAlign='right'; ctx.textBaseline='alphabetic'; ctx.fillText(txt,x1,y-10);
+}
+let animId=0;
+const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+function animateR(target){
+  target=Math.max(1e-6,Math.min(Math.pow(10,0.4),target));
+  if(reduceMotion.matches){ animId++; state.anim=false; setR(target); return; }
+  const a=Math.log10(state.R), b=Math.log10(target), t0=performance.now(), dur=Math.min(900,300+120*Math.abs(b-a)), id=++animId;
+  state.anim=true;
+  const step=(now)=>{ if(id!==animId) return; let u=Math.min(1,(now-t0)/dur); u=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    state.R=Math.pow(10,a+(b-a)*u); $('#Rlog').value=Math.log10(state.R); heatKey='';
+    if(u<1){ drawAll(); requestAnimationFrame(step); } else { state.anim=false; heatKey=''; drawAll(); } };
+  requestAnimationFrame(step);
+}
+
+/* ---------- カラーバー・凡例 ---------- */
+function drawColorbar(v){
+  const cv=$('#cbar'), w=cv.clientWidth||200, h=22, dp=Math.min(window.devicePixelRatio||1,2);
+  if(cv.width!==Math.round(w*dp)||cv.height!==Math.round(h*dp)){ cv.width=Math.round(w*dp); cv.height=Math.round(h*dp); }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dp,0,0,dp,0,0); ctx.clearRect(0,0,w,h);
+  const fn=state.fn, span=fn.vmax-fn.vmin, xv=(u)=>Math.max(0,Math.min(1,(u-fn.vmin)/span))*w, top=9, bh=12;
+  const g=ctx.createLinearGradient(0,0,w,0);
+  g.addColorStop(0,rgba(C['heat-lo'])); g.addColorStop(0.5,rgba(C['heat-mid'])); g.addColorStop(1,rgba(C['heat-hi']));
+  ctx.fillStyle=g; ctx.fillRect(0,top,w,bh); ctx.strokeStyle=rgba(C.line); ctx.lineWidth=1; ctx.strokeRect(0.5,top+0.5,w-1,bh-1);
+  if(state.tab==='game'){ const e=curEps(), a=xv(state.L-e), b=xv(state.L+e);
+    ctx.strokeStyle=rgba(C.blue); ctx.lineWidth=2; ctx.strokeRect(Math.min(a,w-3)+1,top-1,Math.max(2,b-a-2),bh+2); }
+  if(Number.isFinite(v)){ const x=xv(v); ctx.fillStyle=rgba(C.ink); ctx.beginPath(); ctx.moveTo(x-6,0); ctx.lineTo(x+6,0); ctx.lineTo(x,top-1); ctx.closePath(); ctx.fill(); ctx.fillRect(x-1,top,2,bh); }
+  $('#cbmin').textContent=sci(fn.vmin,3)+' 以下'; $('#cbmax').textContent=sci(fn.vmax,3)+' 以上';
+}
+function meterPoint(){
+  if(state.hover) return {x:state.hover.x, y:state.hover.y, what:'カーソルの位置での f の値'};
+  if(state.tab==='path'){ const [x,y]=gammaPt(state.path,Math.pow(10,-state.s)); return {x,y,what:'経路上の青い点での f の値'}; }
+  if(state.tab==='game'){
+    if(state.counter) return {x:state.counter.x,y:state.counter.y,what:'相手が見つけた反例 × での f の値'};
+    if(state.seq.length){ const q=state.seq[state.seq.length-1]; return {x:q.x,y:q.y,what:'集めた反例のうち最後の点での f の値'}; }
+  }
+  return null;
+}
+function updateMeter(){
+  const pt=meterPoint(), fn=state.fn;
+  if(!pt){ $('#mwhat').textContent='平面にカーソルを置く（スマートフォンではタップする）と，その点での f の値を表示します'; $('#mval').textContent='—'; $('#mside').innerHTML=''; drawColorbar(NaN); return; }
+  const v=fn.f(pt.x,pt.y);
+  $('#mwhat').textContent=pt.what;
+  $('#mval').textContent=Number.isFinite(v)?sci(v,5):'定義されない';
+  let s='点 <span class="m">('+sci(pt.x,3)+', '+sci(pt.y,3)+')</span><br>原点までの距離 <span class="m">'+sci(Math.hypot(pt.x,pt.y),3)+'</span>';
+  if(state.tab==='game'&&Number.isFinite(v)){ const e=curEps(), dv=Math.abs(v-state.L);
+    s+='<br><span class="m">|<i>f</i> − <i>L</i>| = '+sci(dv,3)+'</span>：'+(dv<e?'<span class="in">帯 <i>L</i> ± ε の中</span>':'<span class="out">帯 <i>L</i> ± ε の外</span>'); }
+  $('#mside').innerHTML=s;
+  drawColorbar(v);
+}
+function keyItem(cls,text,style){ return '<li><span class="k '+cls+'"'+(style?' style="'+style+'"':'')+' aria-hidden="true"></span><span>'+text+'</span></li>'; }
+function updateKeys(){
+  const fn=state.fn; let h='';
+  h+=keyItem('k-ring', (fn.id==='p4a'||fn.id==='p4b') ? '白丸：原点．ここでは <i>f</i>(0, 0) = 0 と定めている' : '白丸：原点．<i>f</i> はここで定義されない（極限ではこの点の値は使わない）');
+  if(fn.step>0) h+=keyItem('k-thin','細い線：等高線（<i>f</i> の値が '+sci(fn.step,3)+' ずつ変わる境目）');
+  if(fn.id==='p3b') h+=keyItem('k-gray','灰色：<i>f</i> が定義されない点（<i>x</i> = 0 または <i>y</i> = 0）');
+  if(state.tab==='path'){
+    h+=keyItem('k-line','青い線：いまの経路','--c:'+rgba(C.blue));
+    h+=keyItem('k-dot','青い点：経路上の点（「<i>t</i> を動かす」で動く）','--c:'+rgba(C.blue));
+    if(state.saved.length) h+=keyItem('k-line','ほかの色の線：残した経路','--c:'+state.saved[0].col);
+  } else if(state.tab==='game'){
+    h+=keyItem('k-dash','青い破線の円：δ 円．相手はこの中から反例を探す');
+    h+=keyItem('k-hatch','赤い斜線：|<i>f</i> − <i>L</i>| ≥ ε となる点．ここが円の中に入ると負け');
+    if(state.counter) h+=keyItem('k-cross','×：相手が見つけた反例');
+    if(state.seq.length) h+=keyItem('k-dot','赤い点：δ を半分ずつにして集めた反例','--c:'+rgba(C.red));
+    h+=keyItem('k-frame','カラーバーの青枠：<i>L</i> ± ε に入る値の範囲');
+  } else {
+    h+=keyItem('k-line','青い円：グラフに描いている半径 <i>r</i> の円（表示範囲に入るもの）','--c:'+rgba(C.blue));
+  }
+  h+=keyItem('k-scale','右下の目盛り：その長さが表す実際の距離（拡大すると変わる）');
+  $('#keys').innerHTML=h;
+}
+
+/* ---------- 経路タブ ---------- */
+function setupCanvas(cv){
+  const w=cv.clientWidth||300, h=cv.clientHeight||200, dp=Math.min(window.devicePixelRatio||1,2);
+  if(cv.width!==Math.round(w*dp)||cv.height!==Math.round(h*dp)){ cv.width=Math.round(w*dp); cv.height=Math.round(h*dp); }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dp,0,0,dp,0,0); ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function termHTML(c,e){ if(c===0) return '0'; const cs=c===1?'':c===-1?'−':sci(c,3); return cs+'<i>t</i>'+(e===1?'':'<sup>'+sci(e,3)+'</sup>'); }
+function pathHTML(p){ return '<span class="m">('+termHTML(p.a,p.al)+', '+termHTML(p.b,p.be)+')</span>'; }
+function pathLimit(p){ const [x,y]=gammaPt(p,1e-8); return state.fn.f(x,y); }
+
+function drawPathChart(){
+  const {ctx,w,h}=setupCanvas($('#pathChart'));
+  const l=46,r=12,t=10,b=28, pw=w-l-r, ph=h-t-b, fn=state.fn, vmin=fn.vmin, vmax=fn.vmax;
+  const xs=(s)=>l+s/8*pw, ys=(v)=>t+(vmax-v)/(vmax-vmin)*ph;
+  ctx.font='11px '+FONT;
+  const st=niceStep((vmax-vmin)/4);
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let k=Math.ceil(vmin/st);k*st<=vmax+1e-12;k++){ const v=k*st, y=Math.round(ys(v))+0.5;
+    ctx.strokeStyle=rgba(C.ink,0.08); ctx.beginPath(); ctx.moveTo(l,y); ctx.lineTo(l+pw,y); ctx.stroke();
+    ctx.fillStyle=rgba(C.muted); ctx.fillText(sci(v,3),l-6,y); }
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  for(let s=0;s<=8;s+=2){ const x=Math.round(xs(s))+0.5; ctx.strokeStyle=rgba(C.ink,0.08); ctx.beginPath(); ctx.moveTo(x,t); ctx.lineTo(x,t+ph); ctx.stroke();
+    ctx.fillStyle=rgba(C.muted); ctx.fillText(s===0?'t = 1':'10'+sup(-s),x,t+ph+7); }
+  ctx.strokeStyle=rgba(C.line); ctx.strokeRect(l+0.5,t+0.5,pw,ph);
+  ctx.save(); ctx.beginPath(); ctx.rect(l,t,pw,ph); ctx.clip();
+  if(Number.isFinite(state.L)){ ctx.setLineDash([5,4]); ctx.strokeStyle=rgba(C.ink,0.65); ctx.lineWidth=1.2;
+    const y=ys(state.L); ctx.beginPath(); ctx.moveTo(l,y); ctx.lineTo(l+pw,y); ctx.stroke(); ctx.setLineDash([]); }
+  const span=vmax-vmin;
+  const curve=(p,col,lw)=>{ ctx.beginPath(); let pen=false;
+    for(let k=0;k<=1200;k++){ const s=8*k/1200, tt=Math.pow(10,-s); const [x,y]=gammaPt(p,tt); let v=fn.f(x,y);
+      if(!Number.isFinite(v)){ pen=false; continue; } v=Math.max(vmin-span,Math.min(vmax+span,v));
+      const X1=xs(s), Y1=ys(v); if(pen) ctx.lineTo(X1,Y1); else { ctx.moveTo(X1,Y1); pen=true; } }
+    ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineJoin='round'; ctx.stroke(); };
+  state.saved.forEach(sv=>curve(sv.p,sv.col,1.6));
+  curve(state.path,rgba(C.blue),2.2);
+  const s0=state.s, [x0,y0]=gammaPt(state.path,Math.pow(10,-s0)), v0=fn.f(x0,y0);
+  ctx.setLineDash([2,3]); ctx.strokeStyle=rgba(C.blue,0.6); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(xs(s0),t); ctx.lineTo(xs(s0),t+ph); ctx.stroke(); ctx.setLineDash([]);
+  if(Number.isFinite(v0)){ ctx.beginPath(); ctx.arc(xs(s0),ys(Math.max(vmin-span,Math.min(vmax+span,v0))),4.5,0,2*Math.PI); ctx.fillStyle=rgba(C.blue); ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=rgba(C.sheet); ctx.stroke(); }
+  ctx.restore();
+}
+function updatePathText(){
+  const p=state.path, fn=state.fn, tt=Math.pow(10,-state.s), [x,y]=gammaPt(p,tt), v=fn.f(x,y), lim=pathLimit(p);
+  $('#tso').textContent=sci(tt,3);
+  $('#pathOut').innerHTML='経路 '+pathHTML(p)+'：<span class="m"><i>t</i> = '+sci(tt,3)+'</span> で <span class="m"><i>f</i>(γ(<i>t</i>)) = '+sci(v,6)+'</span>．'
+    +'<br><span class="m"><i>t</i> = 10⁻⁸</span> では <span class="m"><i>f</i> ≈ '+sci(lim,6)+'</span>．';
+  $('#pao').textContent=sci(p.a,3); $('#palo').textContent=sci(p.al,3); $('#pbo').textContent=sci(p.b,3); $('#pbeo').textContent=sci(p.be,3);
+  const ul=$('#saved'); ul.innerHTML='';
+  state.saved.forEach(sv=>{ const li=document.createElement('li'); li.innerHTML='<span class="sw" style="background:'+sv.col+'"></span>'+pathHTML(sv.p)+' の行き先 ≈ <span class="m">'+sci(pathLimit(sv.p),6)+'</span>'; ul.appendChild(li); });
+  $('#keep').disabled = state.saved.length>=4;
+}
+const PRESETS=[
+  {lab:'(<i>t</i>, <i>t</i>)', p:{a:1,al:1,b:1,be:1}},
+  {lab:'(<i>t</i>, <i>t</i><sup>3/2</sup>)', p:{a:1,al:1,b:1,be:1.5}},
+  {lab:'(<i>t</i>, 0)', p:{a:1,al:1,b:0,be:1}},
+  {lab:'(0, <i>t</i>)', p:{a:0,al:1,b:1,be:1}},
+  {lab:'(<i>t</i>, 2<i>t</i>)', p:{a:1,al:1,b:2,be:1}},
+  {lab:'(<i>t</i>, <i>t</i>²)', p:{a:1,al:1,b:1,be:2}},
+  {lab:'(−<i>t</i>, <i>t</i>)', p:{a:-1,al:1,b:1,be:1}},
+];
+function syncPathSliders(){ $('#pa').value=state.path.a; $('#pal').value=state.path.al; $('#pb').value=state.path.b; $('#pbe').value=state.path.be; }
+
+/* ---------- ε-δ ゲーム ---------- */
+const ANG=(()=>{ const a=[]; const U=1440; for(let k=0;k<U;k++) a.push(2*Math.PI*k/U);
+  for(const base of [0,Math.PI/2,Math.PI,1.5*Math.PI]) for(let q=0;q<=40;q++){ const off=Math.pow(10,-(1+7*q/40)); a.push(base+off, base-off); }
+  const snap=(v)=>Math.abs(v)<1e-14?0:v; return {c:a.map(t=>snap(Math.cos(t))), s:a.map(t=>snap(Math.sin(t))), th:a}; })();
+const RAD=(()=>{ const r=[]; for(let i=0;i<40;i++) r.push(0.999*(1-i/40)); for(let k=0;k<60;k++) r.push(Math.pow(10,-1.6-6.4*k/59)); return r; })();
+let sampleBuf=new Float64Array(RAD.length*ANG.c.length+6000);
+
+function adversary(delta,L,keep){
+  const f=state.fn.f; let best=-1,bx=0,by=0,bv=NaN,n=0;
+  const cs=ANG.c, sn=ANG.s, M=cs.length;
+  for(let i=0;i<RAD.length;i++){ const r=RAD[i]*delta;
+    for(let k=0;k<M;k++){ const x=r*cs[k], y=r*sn[k], v=f(x,y); if(!Number.isFinite(v)) continue;
+      if(keep) sampleBuf[n]=v; n++; const dv=Math.abs(v-L); if(dv>best){ best=dv; bx=x; by=y; bv=v; } } }
+  for(let k=0;k<6000;k++){ const r=delta*Math.sqrt(Math.random())*0.9995, th=2*Math.PI*Math.random();
+    if(r===0) continue; const x=r*Math.cos(th), y=r*Math.sin(th), v=f(x,y); if(!Number.isFinite(v)) continue;
+    if(keep) sampleBuf[n]=v; n++; const dv=Math.abs(v-L); if(dv>best){ best=dv; bx=x; by=y; bv=v; } }
+  return {best,bx,by,bv,n};
+}
+function updateGameText(){
+  $('#rnum').textContent=Math.min(state.round+1,EPS.length); $('#rtot').textContent=EPS.length;
+  $('#epsOut').textContent=sci(curEps(),3); $('#dOut').textContent=sci(state.delta,2);
+  const lg=$('#log'); lg.innerHTML='';
+  state.attempts.slice(-30).forEach(a=>{ const li=document.createElement('li'); li.className=a.win?'win':'lose';
+    li.textContent='ε = '+sci(a.eps,3)+'，δ = '+sci(a.delta,2)+' → '+(a.win?'あなたの勝ち':'相手の勝ち')+'（max |f − L| ≈ '+sci(a.dev,3)+'）'; lg.appendChild(li); });
+  lg.scrollTop=lg.scrollHeight;
+}
+function setVerdict(html,cls){ const v=$('#verdict'); v.className='verdict'+(cls?' '+cls:''); v.innerHTML=html; }
+function judge(){
+  const eps=curEps(), L=state.L, d=state.delta;
+  const res=adversary(d,L,true);
+  state.last={n:res.n,eps,L,best:res.best,delta:d};
+  state.seq=[];
+  if(res.best>=eps){
+    state.counter={x:res.bx,y:res.by,v:res.bv};
+    state.attempts.push({eps,delta:d,win:false,dev:res.best});
+    setVerdict('相手の勝ち．反例 <span class="m"><i>x</i> = ('+sci(res.bx,3)+', '+sci(res.by,3)+')</span>，<span class="m">|<i>x</i>| = '+sci(Math.hypot(res.bx,res.by),3)+'</span> で <span class="m"><i>f</i>(<i>x</i>) = '+sci(res.bv,5)+'</span>，<span class="m">|<i>f</i>(<i>x</i>) − <i>L</i>| = '+sci(res.best,3)+' ≥ ε</span>．δ を小さくするか，<span class="m"><i>L</i></span> を見直そう．','lose');
+  } else {
+    state.counter=null;
+    state.attempts.push({eps,delta:d,win:true,dev:res.best});
+    state.round++;
+    if(state.round>=EPS.length){
+      setVerdict(res.n.toLocaleString()+' 点を調べても反例なし．全 '+EPS.length+' ラウンド突破です．数値実験の範囲では <span class="m"><i>L</i> = '+sci(L,6)+'</span> が極限らしい．勝てた δ を ε の式で書き，それで本当に勝てることを証明しよう．','win');
+    } else {
+      setVerdict('あなたの勝ち（'+res.n.toLocaleString()+' 点を調べて max <span class="m">|<i>f</i> − <i>L</i>|</span> ≈ '+sci(res.best,3)+' &lt; ε）．次の ε は '+sci(curEps(),3)+' です．','win');
+    }
+  }
+  heatKey=''; updateGameText(); requestDraw();
+}
+function collectSeq(){
+  const eps=curEps(), L=state.L; let d=state.delta; state.seq=[]; state.counter=null; let stopAt=null;
+  for(let k=0;k<12;k++){ const res=adversary(d,L,false); if(res.best>=eps) state.seq.push({x:res.bx,y:res.by,v:res.bv,d}); else { stopAt=d; break; } d/=2; }
+  const out=$('#seqOut');
+  setVerdict(state.seq.length?'ε = '+sci(eps,3)+' を固定したまま，δ を半分ずつにして反例を集めました（下の表と平面の赤い点）．':'δ = '+sci(state.delta,2)+' のままで反例を探しました．', state.seq.length?'lose':'win');
+  if(state.seq.length===0){
+    out.innerHTML='<p class="cap">δ = '+sci(state.delta,2)+' では反例が見つかりません．この ε についてはすでに勝てています．</p>';
+  } else {
+    let rows='<tr><th>k</th><th>δ<sub>k</sub></th><th>|x<sub>k</sub>|</th><th>f(x<sub>k</sub>)</th><th>|f(x<sub>k</sub>) − L|</th></tr>';
+    state.seq.forEach((q,i)=>{ rows+='<tr><td>'+(i+1)+'</td><td>'+sci(q.d,2)+'</td><td>'+sci(Math.hypot(q.x,q.y),3)+'</td><td>'+sci(q.v,5)+'</td><td>'+sci(Math.abs(q.v-L),3)+'</td></tr>'; });
+    const msg = stopAt===null
+      ? '<span class="m">δ<sub>k</sub> = δ/2<sup>k−1</sup></span> ごとに反例 <span class="m"><i>x<sub>k</sub></i></span> がとれました．<span class="m"><i>x<sub>k</sub></i> → 0</span> なのに <span class="m">|<i>f</i>(<i>x<sub>k</sub></i>) − <i>L</i>| ≥ ε</span> のまま．これは定理1の (B) ⇒ (A) を対偶で示すときに作る点列そのものです．'
+      : 'δ = '+sci(stopAt,2)+' で反例が尽きました．十分小さい δ なら勝てるということです．';
+    out.innerHTML='<p class="cap" style="margin-top:10px">'+msg+'</p><div class="tablewrap"><table>'+rows+'</table></div>';
+  }
+  requestDraw();
+}
+function drawStrip(){
+  const {ctx,w,h}=setupCanvas($('#strip'));
+  ctx.font='12px '+FONT;
+  if(!state.last){ ctx.fillStyle=rgba(C.muted); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('勝負すると，円板内で f がとる値の分布がここに出ます',w/2,h/2); return; }
+  const {n,eps,L,best}=state.last;
+  const W=Math.max(3*eps,best*1.12), lo=L-W, hi=L+W;
+  const l=12,r=12,t=8,b=34, pw=w-l-r, ph=h-t-b;
+  const xs=(v)=>l+(v-lo)/(hi-lo)*pw;
+  ctx.fillStyle=rgba(C.blue,0.16); ctx.fillRect(xs(L-eps),t,xs(L+eps)-xs(L-eps),ph);
+  ctx.strokeStyle=rgba(C.blue,0.8); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(xs(L-eps)+0.5,t); ctx.lineTo(xs(L-eps)+0.5,t+ph); ctx.moveTo(xs(L+eps)-0.5,t); ctx.lineTo(xs(L+eps)-0.5,t+ph); ctx.stroke();
+  const B=Math.max(40,Math.floor(pw/2)), cnt=new Float64Array(B);
+  for(let i=0;i<n;i++){ let k=Math.floor((sampleBuf[i]-lo)/(hi-lo)*B); if(k<0)k=0; if(k>=B)k=B-1; cnt[k]++; }
+  let mx=0; for(let k=0;k<B;k++) if(cnt[k]>mx) mx=cnt[k];
+  const bw=pw/B;
+  for(let k=0;k<B;k++){ if(!cnt[k]) continue; const c=lo+(k+0.5)/B*(hi-lo), hh=Math.max(1.5,Math.sqrt(cnt[k]/mx)*ph);
+    ctx.fillStyle=Math.abs(c-L)>=eps?rgba(C.red,0.9):rgba(C.ink,0.75); ctx.fillRect(l+k*bw,t+ph-hh,Math.max(1,bw-0.4),hh); }
+  ctx.strokeStyle=rgba(C.line); ctx.beginPath(); ctx.moveTo(l,t+ph+0.5); ctx.lineTo(l+pw,t+ph+0.5); ctx.stroke();
+  ctx.fillStyle=rgba(C.muted); ctx.textBaseline='top';
+  ctx.textAlign='left'; ctx.fillText(sci(lo,4),l,t+ph+6);
+  ctx.textAlign='right'; ctx.fillText(sci(hi,4),l+pw,t+ph+6);
+  ctx.textAlign='center'; ctx.fillStyle=rgba(C.blue); ctx.fillText('L = '+sci(L,5),xs(L),t+ph+6);
+  ctx.fillStyle=rgba(C.muted); ctx.fillText('δ = '+sci(state.last.delta,2)+'，ε = '+sci(eps,3),xs(L),t+ph+20);
+}
+
+/* ---------- 極座標タブ ---------- */
+let polarKey='', polarCache=null;
+function polarData(P){
+  const fn=state.fn, L=state.L, key=[fn.id,L,P].join('|');
+  if(key===polarKey) return polarCache;
+  const extra=[]; for(const base of [0,Math.PI/2,Math.PI,1.5*Math.PI,2*Math.PI]) for(let q=0;q<=48;q++){ const off=Math.pow(10,-(1+8*q/48)); extra.push(base+off, base-off); }
+  const per=24, out=[];
+  for(const r of RS){
+    const mn=new Float64Array(P).fill(Infinity), mxa=new Float64Array(P).fill(-Infinity); let M=0;
+    const add=(th)=>{ const v=fn.f(r*Math.cos(th),r*Math.sin(th)); if(!Number.isFinite(v)) return;
+      let c=Math.floor(th/(2*Math.PI)*P); if(c<0||c>=P) return; if(v<mn[c]) mn[c]=v; if(v>mxa[c]) mxa[c]=v; const dv=Math.abs(v-L); if(dv>M) M=dv; };
+    for(let c=0;c<P;c++) for(let k=0;k<per;k++) add((c+(k+0.5)/per)/P*2*Math.PI);
+    extra.forEach(th=>{ if(th>=0&&th<2*Math.PI) add(th); });
+    out.push({r,mn,mx:mxa,M});
+  }
+  polarKey=key; polarCache=out; return out;
+}
+function drawPolarChart(){
+  const {ctx,w,h}=setupCanvas($('#polarChart'));
+  const l=46,r=12,t=10,b=28, pw=w-l-r, ph=h-t-b, fn=state.fn, vmin=fn.vmin, vmax=fn.vmax;
+  const P=Math.max(100,Math.floor(pw));
+  const data=polarData(P);
+  const xs=(c)=>l+(c+0.5)/P*pw, ys=(v)=>t+(vmax-v)/(vmax-vmin)*ph;
+  ctx.font='11px '+FONT;
+  const st=niceStep((vmax-vmin)/4);
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let k=Math.ceil(vmin/st);k*st<=vmax+1e-12;k++){ const v=k*st, y=Math.round(ys(v))+0.5;
+    ctx.strokeStyle=rgba(C.ink,0.08); ctx.beginPath(); ctx.moveTo(l,y); ctx.lineTo(l+pw,y); ctx.stroke();
+    ctx.fillStyle=rgba(C.muted); ctx.fillText(sci(v,3),l-6,y); }
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ['0','π/2','π','3π/2','2π'].forEach((lab,i)=>{ const x=Math.round(l+i/4*pw)+0.5; ctx.strokeStyle=rgba(C.ink,0.08); ctx.beginPath(); ctx.moveTo(x,t); ctx.lineTo(x,t+ph); ctx.stroke(); ctx.fillStyle=rgba(C.muted); ctx.fillText('θ = '+lab,x,t+ph+7); });
+  ctx.strokeStyle=rgba(C.line); ctx.strokeRect(l+0.5,t+0.5,pw,ph);
+  ctx.save(); ctx.beginPath(); ctx.rect(l,t,pw,ph); ctx.clip();
+  if(Number.isFinite(state.L)){ ctx.setLineDash([5,4]); ctx.strokeStyle=rgba(C.ink,0.65); ctx.lineWidth=1.2; const y=ys(state.L); ctx.beginPath(); ctx.moveTo(l,y); ctx.lineTo(l+pw,y); ctx.stroke(); ctx.setLineDash([]); }
+  const span=vmax-vmin, cl=(v)=>Math.max(vmin-span,Math.min(vmax+span,v));
+  data.forEach((dset,idx)=>{ const a=0.28+0.18*idx; ctx.strokeStyle=rgba(C.blue,Math.min(1,a)); ctx.lineWidth=idx===data.length-1?2:1.5; ctx.beginPath(); let pen=false;
+    for(let c=0;c<P;c++){ if(!Number.isFinite(dset.mn[c])){ pen=false; continue; } const x=xs(c);
+      if(pen) ctx.lineTo(x,ys(cl(dset.mn[c]))); else { ctx.moveTo(x,ys(cl(dset.mn[c]))); pen=true; }
+      ctx.lineTo(x,ys(cl(dset.mx[c]))); }
+    ctx.stroke(); });
+  ctx.restore();
+  let rows='<tr><th style="text-align:left">線</th><th>r</th><th>M(r) ≈</th></tr>';
+  data.forEach((dset,idx)=>{ const a=0.28+0.18*idx; rows+='<tr><td style="text-align:left"><span class="sw" style="background:'+rgba(C.blue,Math.min(1,a))+';height:'+(idx===data.length-1?4:3)+'px"></span></td><td>'+sci(dset.r,1)+'</td><td>'+sci(dset.M,4)+'</td></tr>'; });
+  $('#supTable').innerHTML=rows;
+}
+
+/* ---------- 描画の取りまとめ ---------- */
+let pending=false;
+function requestDraw(){ if(pending) return; pending=true; requestAnimationFrame(()=>{ pending=false; drawAll(); }); }
+function drawAll(){
+  state.hover=null;
+  drawPlane(); updateMeter(); updateKeys();
+  if(state.tab==='path'){ drawPathChart(); updatePathText(); }
+  else if(state.tab==='game'){ drawStrip(); updateGameText(); }
+  else drawPolarChart();
+  $('#Rout').textContent='R = '+sci(state.R,2);
+}
+
+/* ---------- UI の組み立て ---------- */
+function buildFnBar(){
+  const bar=$('#fnbar');
+  FUNS.forEach(fn=>{ const b=document.createElement('button'); b.className='fnbtn'; b.type='button';
+    b.setAttribute('aria-pressed', fn===state.fn?'true':'false');
+    b.innerHTML='<span class="tag">'+fn.tag+'</span><span class="m"><i>f</i> = '+fn.html+'</span>';
+    b.addEventListener('click',()=>selectFn(fn)); bar.appendChild(b); fn.btn=b; });
+}
+function resetGame(msg){
+  state.round=0; state.counter=null; state.seq=[]; state.last=null; state.attempts=[];
+  $('#seqOut').innerHTML='';
+  setVerdict(msg||'平面の赤い斜線は <span class="m">|<i>f</i> − <i>L</i>| ≥ ε</span> となる点です．δ 円板がこれを避けられれば勝ちです．','');
+  heatKey='';
+}
+function selectFn(fn){
+  state.fn=fn; FUNS.forEach(g=>g.btn.setAttribute('aria-pressed',g===fn?'true':'false'));
+  $('#fnhint').innerHTML=fn.hint;
+  state.L=0; $('#L').value='0';
+  resetGame(); polarKey=''; heatKey=''; requestDraw();
+}
+function setR(R){ state.R=Math.max(1e-6,Math.min(Math.pow(10,0.4),R)); $('#Rlog').value=Math.log10(state.R); heatKey=''; requestDraw(); }
+
+function buildPresets(){
+  const box=$('#presets');
+  PRESETS.forEach(pr=>{ const b=document.createElement('button'); b.className='act'; b.type='button'; b.innerHTML='<span class="m">'+pr.lab+'</span>';
+    b.addEventListener('click',()=>{ state.path={...pr.p}; syncPathSliders(); requestDraw(); }); box.appendChild(b); });
+}
+
+function bind(){
+  $('#Rlog').addEventListener('input',e=>{ animId++; state.anim=false; state.R=Math.pow(10,+e.target.value); heatKey=''; requestDraw(); });
+  $('#zin').addEventListener('click',()=>animateR(state.R/10));
+  $('#zout').addEventListener('click',()=>animateR(state.R*10));
+  $('#zreset').addEventListener('click',()=>animateR(Math.pow(10,0.18)));
+  $('#L').addEventListener('input',e=>{ const v=parseFloat(e.target.value); if(!Number.isFinite(v)) return; state.L=v; polarKey='';
+    resetGame('<span class="m"><i>L</i></span> を変えたので，ラウンド1からやり直しです．'); requestDraw(); });
+  [['#pa','a'],['#pal','al'],['#pb','b'],['#pbe','be']].forEach(([id,k])=>$(id).addEventListener('input',e=>{ state.path[k]=+e.target.value; requestDraw(); }));
+  $('#ts').addEventListener('input',e=>{ state.s=+e.target.value; requestDraw(); });
+  $('#keep').addEventListener('click',()=>{ if(state.saved.length>=4) return; const used=state.saved.map(s=>s.col); const col=SAVE_COLS.find(c=>!used.includes(c));
+    state.saved.push({p:{...state.path},col}); requestDraw(); });
+  $('#clearPaths').addEventListener('click',()=>{ state.saved=[]; requestDraw(); });
+  $('#useL').addEventListener('click',()=>{ const v=pathLimit(state.path); if(!Number.isFinite(v)) return; const r=Math.round(v*1e6)/1e6;
+    $('#L').value=String(r); state.L=r; polarKey=''; resetGame('<span class="m"><i>L</i> = '+sci(r,6)+'</span> で勝負します．'); requestDraw(); });
+  $('#dlog').addEventListener('input',e=>{ state.delta=Math.pow(10,+e.target.value); state.counter=null; state.seq=[]; requestDraw(); });
+  $('#zdelta').addEventListener('click',()=>animateR(state.delta*1.6));
+  $('#judge').addEventListener('click',judge);
+  $('#seqBtn').addEventListener('click',collectSeq);
+  $('#resetGame').addEventListener('click',()=>{ resetGame(); requestDraw(); });
+
+  const tabs=['path','game','polar'];
+  const setTab=(name,focus)=>{ state.tab=name; tabs.forEach(n=>{ const b=$('#t-'+n), p=$('#p-'+n), on=n===name;
+      b.setAttribute('aria-selected',on?'true':'false'); b.tabIndex=on?0:-1; p.hidden=!on; if(on&&focus) b.focus(); });
+    heatKey=''; requestDraw(); };
+  tabs.forEach((n,i)=>{ const b=$('#t-'+n); b.addEventListener('click',()=>setTab(n));
+    b.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault(); const j=(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length; setTab(tabs[j],true); } }); });
+
+  const showAt=(ev)=>{ const rect=plane.getBoundingClientRect(); const px=ev.clientX-rect.left, py=ev.clientY-rect.top;
+    if(px<0||py<0||px>rect.width||py>rect.height) return;
+    state.hover={x:-state.R+px/rect.width*2*state.R, y:state.R-py/rect.height*2*state.R}; updateMeter(); };
+  plane.addEventListener('pointermove',showAt);
+  plane.addEventListener('pointerdown',showAt);
+  plane.addEventListener('pointerleave',(ev)=>{ if(ev.pointerType==='mouse'){ state.hover=null; updateMeter(); } });
+
+  const ro=new ResizeObserver(()=>{ sizePlane(); polarKey=''; requestDraw(); });
+  ro.observe($('#planewrap')); ro.observe($('.panel'));
+  const mq=window.matchMedia('(prefers-color-scheme: dark)');
+  const onTheme=()=>{ readTheme(); heatKey=''; requestDraw(); };
+  if(mq.addEventListener) mq.addEventListener('change',onTheme); else if(mq.addListener) mq.addListener(onTheme);
+  new MutationObserver(onTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+}
+
+readTheme(); buildFnBar(); buildPresets(); bind();
+$('#fnhint').innerHTML=state.fn.hint;
+sizePlane(); syncPathSliders(); requestDraw();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>requestDraw());
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>多変数関数の極限と連続性：手を動かして確かめる教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=STIX+Two+Text:ital@0;1&display=swap">
+<style>
+:root{
+  --paper:#F3F5F1; --sheet:#FFFFFF; --ink:#1F2A44; --muted:#5B6476; --line:#CAD4D0; --blue:#2F6FB0;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --paper:#151C1B; --sheet:#1D2625; --ink:#E3E9E5; --muted:#9AA6A1; --line:#34413D; --blue:#82B6FF; color-scheme:dark; }
+}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  font-size:16px;line-height:1.8;-webkit-text-size-adjust:100%}
+main{max-width:760px;margin:0 auto;padding:40px 20px 32px}
+h1{font-size:clamp(1.5rem,1.1rem + 1.4vw,2rem);line-height:1.35;margin:0}
+.lede{color:var(--muted);margin:.6em 0 1.8em}
+.m{font-family:"STIX Two Text","Cambria Math","Times New Roman",serif;font-size:1.06em;white-space:nowrap}
+.m i{font-style:italic}
+ol{list-style:none;margin:0;padding:0;display:grid;gap:12px;counter-reset:n}
+li{counter-increment:n}
+a.item{display:block;position:relative;padding:16px 20px 16px 64px;background:var(--sheet);border:1px solid var(--line);border-radius:10px;color:inherit;text-decoration:none}
+a.item::before{content:counter(n);position:absolute;left:20px;top:18px;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:14px;line-height:1}
+a.item:hover{border-color:var(--ink)}
+a.item:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.t{font-weight:700;font-size:1.1rem;line-height:1.5;color:var(--blue)}
+a.item:hover .t{text-decoration:underline}
+.d{margin:4px 0 0;color:var(--ink)}
+.p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+footer{margin-top:2em;font-size:14px;color:var(--muted)}
+footer p{margin:.3em 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>多変数関数の極限と連続性</h1>
+  <p class="lede">演習「<span class="m">ℝ<sup><i>n</i></sup></span> における写像の連続性」の補助教材です．ブラウザ上で点や円を動かしながら，<span class="m">(<i>x</i>, <i>y</i>) → (0, 0)</span> での極限と ε-δ による連続性を確かめます．上から順に進めるのがおすすめです．</p>
+
+  <ol>
+    <li><a class="item" href="limit-lab-mission1.html">
+      <span class="t">近づき方で行き先は変わる？</span>
+      <p class="d">2つの道に沿って原点に近づけ，行き先が違うことから「極限が存在しない」ことを確かめます．</p>
+      <p class="p">問題1　ミッション形式（5ステップ）</p>
+    </a></li>
+    <li><a class="item" href="limit-lab-mission4.html">
+      <span class="t">原点で連続か？ ε-δ で決着をつける</span>
+      <p class="d">相手が ε を出し，あなたが δ で答えるゲームで，2つの関数が原点で連続かどうかを判定します．</p>
+      <p class="p">問題4，問題2・定理1　ミッション形式（6ステップ）</p>
+    </a></li>
+    <li><a class="item" href="limit-lab.html">
+      <span class="t">原点への近づき方ラボ（自由に調べる）</span>
+      <p class="d">6つの関数について，経路・ε-δ ゲーム・極座標の3つの見方で自由に調べられます．</p>
+      <p class="p">問題1・3・4</p>
+    </a></li>
+  </ol>
+
+  <footer>
+    <p>パソコンでもスマートフォンでも使えます．画面上の計算は有限個の点で確かめた結果なので，証明は各ページの「式で確かめる」「きちんと書くと」の形で書きましょう．</p>
+  </footer>
+</main>
+</body>
+</html>
