@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>内部と閉包を描いてみる</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEF3F6; --canvas:#FBFDFE; --panel:#FFFFFF; --ink:#1C2733; --muted:#566676;
+  --grid:#C3D1DB; --line:#D3DEE6; --a:#2948A3; --b:#9E6209; --bad:#C2304F; --focus:#0E8276;
+  --serif:"STIX Two Text","Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+  --sans:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Yu Gothic",system-ui,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101B25; --canvas:#152431; --panel:#172838; --ink:#E2EAF0; --muted:#97A8B7;
+    --grid:#2B3E50; --line:#273A4C; --a:#86A3F5; --b:#EDB052; --bad:#F2738F; --focus:#41C8B7;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101B25; --canvas:#152431; --panel:#172838; --ink:#E2EAF0; --muted:#97A8B7;
+  --grid:#2B3E50; --line:#273A4C; --a:#86A3F5; --b:#EDB052; --bad:#F2738F; --focus:#41C8B7;
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+header.top{padding:30px 0 6px}
+h1{font-family:var(--serif);font-weight:700;font-size:clamp(1.65rem,3.4vw,2.35rem);line-height:1.25;margin:0 0 8px;letter-spacing:.03em}
+.lede{max-width:44em;color:var(--muted);margin:0}
+h2{font-family:var(--serif);font-weight:700;font-size:1.2rem;margin:0 0 8px;letter-spacing:.02em}
+h3{font-family:var(--serif);font-weight:500;font-size:1.02rem;margin:14px 0 4px}
+.lab{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(0,1fr);gap:34px;align-items:start;padding:18px 0 30px}
+@media (max-width:920px){.lab{grid-template-columns:minmax(0,1fr);gap:26px}}
+.m{font-family:var(--serif);font-size:1.07em;white-space:nowrap}
+.m i{font-style:italic}
+.m sup{font-size:.68em;line-height:0;vertical-align:.62em;margin-left:.04em}
+.ov{display:inline-block;border-top:1px solid currentColor;padding-top:1px;line-height:1.08}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-size:.88rem;border:0;background:transparent;color:var(--ink);padding:5px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-checked="true"]{background:var(--ink);color:var(--paper)}
+.seg button[data-layer="A"][aria-checked="true"]{background:var(--a);color:#fff}
+.seg button[data-layer="B"][aria-checked="true"]{background:var(--b);color:#fff}
+:root[data-theme="dark"] .seg button[data-layer][aria-checked="true"]{color:#0c1620}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .seg button[data-layer][aria-checked="true"]{color:#0c1620}}
+.btn{font:inherit;font-size:.86rem;padding:4px 11px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+select,input[type=text]{font:inherit;font-size:.88rem;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--canvas)}
+canvas{display:block;width:100%;aspect-ratio:46/36;height:auto;touch-action:none}
+canvas.mini{touch-action:manipulation;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:10px}
+.small{font-size:.84rem;color:var(--muted)}
+.badge{display:inline-block;font-size:.84rem;padding:1px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.82rem;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend svg{color:var(--a)}
+label.chk{display:inline-flex;gap:6px;align-items:center;font-size:.88rem;cursor:pointer}
+input[type=range]{width:min(260px,60vw);accent-color:var(--a)}
+.pstat{margin-top:10px;border-left:3px solid var(--focus);padding:4px 0 4px 12px;font-size:.9rem}
+.pstat table{border-collapse:collapse;margin:4px 0}
+.pstat td{padding:1px 14px 1px 0;vertical-align:baseline}
+.yes{color:var(--a);font-weight:700}.no{color:var(--muted);font-weight:700}
+.tabs{display:flex;flex-wrap:wrap;gap:2px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{font:inherit;font-size:.95rem;background:none;border:0;border-bottom:3px solid transparent;padding:6px 1px 7px;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink);font-weight:700}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+figure{margin:0}
+figcaption{font-size:.86rem;margin-top:4px;color:var(--muted);line-height:1.5}
+figcaption .m{color:var(--ink)}
+.verdict{margin:12px 0 6px;font-size:.95rem}
+.verdict.ok::before{content:"";display:inline-block;width:.6em;height:.6em;border-radius:50%;background:var(--a);margin-right:.5em;vertical-align:.08em}
+.verdict.ng::before{content:"";display:inline-block;width:.6em;height:.6em;border-radius:2px;background:var(--bad);margin-right:.5em;vertical-align:.08em}
+details{margin-top:8px;border-left:3px solid var(--line);padding:2px 0 2px 12px}
+details[open]{border-left-color:var(--focus)}
+summary{cursor:pointer;font-size:.92rem;color:var(--ink)}
+details p{margin:6px 0;font-size:.92rem}
+.flowlab{font-size:.86rem;color:var(--ink);margin:12px 0 4px;font-weight:500}
+.formula{font-size:1.25rem;margin:4px 0 2px}
+.inspector{margin-top:10px;font-size:.9rem;border-left:3px solid var(--focus);padding:4px 0 4px 12px;min-height:2.5em}
+.idlist{position:relative;display:flex;flex-direction:column;margin-bottom:12px;max-height:290px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.idgrp{font-size:.8rem;color:var(--muted);padding:6px 10px 2px}
+.idrow{display:flex;justify-content:space-between;gap:10px;align-items:baseline;width:100%;text-align:left;font:inherit;font-size:.92rem;background:none;color:var(--ink);border:0;border-left:3px solid transparent;padding:4px 10px;cursor:pointer}
+.idrow:hover{background:color-mix(in srgb,var(--a) 6%,transparent)}
+.idrow[aria-pressed="true"]{border-left-color:var(--a);background:color-mix(in srgb,var(--a) 10%,transparent)}
+.tag{font-size:.76rem;color:var(--muted);white-space:nowrap}
+.tag.f{color:var(--bad)}
+.exprrow{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.exprrow label{display:flex;flex-direction:column;font-size:.82rem;color:var(--muted)}
+.exprrow input{font-family:var(--serif);font-size:1rem;width:100%}
+.err{color:var(--bad);font-size:.88rem;min-height:1.4em;margin:6px 0 0}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.thumbs canvas{touch-action:auto}
+.about{border-top:1px solid var(--line);padding:22px 0 40px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:34px}
+@media (max-width:920px){.about{grid-template-columns:minmax(0,1fr)}}
+.about p{max-width:42em;margin:6px 0}
+.codebox{display:flex;gap:8px;margin-top:8px}
+.codebox input{flex:1;min-width:0;font-family:var(--serif)}
+code{font-family:var(--serif);font-size:.95em;background:color-mix(in srgb,var(--ink) 7%,transparent);padding:0 4px;border-radius:4px}
+.hide{display:none!important}
+[hidden]{display:none!important}
+.views{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-top:18px}
+.views button{font:inherit;font-size:1rem;background:none;border:1px solid transparent;border-bottom:0;border-radius:9px 9px 0 0;padding:8px 16px;color:var(--muted);cursor:pointer;margin-bottom:-1px}
+.views button[aria-selected="true"]{background:var(--paper);border-color:var(--line);color:var(--ink);font-weight:700;box-shadow:0 1px 0 var(--paper)}
+canvas.excv{aspect-ratio:4/3}
+.exlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:6px;margin:6px 0 18px}
+.exlist button{font:inherit;font-size:.9rem;text-align:left;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);cursor:pointer;line-height:1.4}
+.exlist button:hover{border-color:var(--muted)}
+.exlist button[aria-pressed="true"]{border-color:var(--a);box-shadow:inset 3px 0 0 var(--a);font-weight:700}
+.exlist .tg{display:block;font-size:.74rem;color:var(--muted);font-weight:400}
+.excard h3{font-family:var(--serif);font-size:1.2rem;margin:0}
+.excard .formula{font-size:1.12rem;white-space:normal}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+.chips button{font-family:var(--serif);font-size:.95rem;padding:1px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);cursor:pointer}
+.chips button:hover{border-color:var(--focus)}
+.exstat{margin-top:12px;border-left:3px solid var(--focus);padding:4px 0 6px 12px;font-size:.93rem}
+.exstat p{margin:6px 0;max-width:40em}
+.vbig{font-family:var(--serif);font-size:1.3rem;font-weight:600;margin-top:4px;line-height:1.4}
+.vbig.int{color:var(--a)}.vbig.bd{color:var(--bad)}.vbig.ext{color:var(--muted)}
+.quizbtns{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.qres{font-weight:700}.qres.ok{color:var(--focus)}.qres.ng{color:var(--bad)}
+.excap{margin:6px 0 0;font-size:.86rem;color:var(--muted)}
+.excap .m{color:var(--ink)}
+.exlab{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+@media (max-width:920px){.exlab{grid-template-columns:minmax(0,1fr)}}
+#exRight .exstat{margin-top:6px}
+.exnow{font-size:.9rem;color:var(--muted);margin:0 0 4px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.exnow b{color:var(--ink);font-weight:700}
+.linkbtn{font:inherit;font-size:.86rem;background:none;border:0;padding:0;color:var(--focus);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.exbottom{border-top:1px solid var(--line);padding:22px 0 34px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:34px;align-items:start}
+@media (max-width:920px){.exbottom{grid-template-columns:minmax(0,1fr);gap:18px}}
+.reltab{border-collapse:collapse;margin:8px 0 4px;font-size:.92rem}
+.reltab th,.reltab td{padding:3px 12px 3px 6px;text-align:left;border-bottom:1px solid var(--line);vertical-align:baseline}
+.reltab th{font-weight:500;color:var(--muted);font-size:.84rem}
+.reltab tr.cur td{background:color-mix(in srgb,var(--a) 10%,transparent)}
+.reltab tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--a)}
+.concl{border-left:3px solid var(--a);padding:2px 0 2px 10px;margin:8px 0}
+.swatch{display:inline-block;width:1.1em;height:.8em;vertical-align:-.05em;border-radius:2px;margin-right:3px}
+.exsel{display:none;align-items:center;gap:6px;font-size:.88rem}
+@media (max-width:920px){
+  .exsel{display:inline-flex}
+  .views{flex-wrap:nowrap}
+  .views button{flex:1 1 0;font-size:.9rem;padding:7px 8px;line-height:1.35}
+}
+.topline{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.guide-btn{margin-top:10px;font-size:.92rem;padding:6px 14px;border-color:var(--focus);color:var(--focus);font-weight:700}
+.restore{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:.88rem;padding:8px 10px;border:1px solid var(--focus);border-radius:8px;margin-bottom:10px;background:color-mix(in srgb,var(--focus) 7%,transparent)}
+.guide{border-top:1px solid var(--line);padding:22px 0 26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:34px}
+@media (max-width:920px){.guide{grid-template-columns:minmax(0,1fr)}}
+.ref{margin:0}
+.ref dt{font-weight:700;font-size:.9rem;margin-top:10px}
+.ref dd{margin:0;font-size:.9rem;color:var(--muted);max-width:40em}
+.chal{list-style:none;margin:8px 0;padding:0}
+.chal li{display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:.92rem;border-bottom:1px dashed var(--line)}
+.chal .mark{flex:none}
+.mark{flex:none;display:inline-grid;place-items:center;width:1.25em;height:1.25em;border-radius:50%;border:1.5px solid var(--focus);font-size:.78em;color:#fff;line-height:1}
+.done>.mark,.mark.on{background:var(--focus)}
+.spot{position:absolute;z-index:40;pointer-events:none;border:2px solid var(--focus);border-radius:10px;box-shadow:0 0 0 9999px rgba(10,22,34,.22);transition:left .25s,top .25s,width .25s,height .25s}
+.tour{position:fixed;z-index:50;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 32px);overflow-y:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:4px solid var(--focus);border-radius:12px;box-shadow:0 12px 34px rgba(10,22,34,.22);padding:12px 18px 14px}
+.tour.left{right:auto;left:16px}
+.tour.center{right:auto;bottom:auto;left:50%;top:50%;transform:translate(-50%,-50%)}
+.tour.tl{right:auto;left:16px;bottom:auto;top:16px}
+.tour-head{display:flex;justify-content:space-between;align-items:center;min-height:1.6em}
+.tour h2{margin:2px 0 6px;font-size:1.15rem}
+.tour p{margin:6px 0;font-size:.92rem}
+.tour .x{font:inherit;font-size:1.25rem;line-height:1;background:none;border:0;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:6px}
+.task{margin-top:10px;padding:9px 11px;border-radius:8px;background:color-mix(in srgb,var(--focus) 9%,transparent);font-size:.9rem;display:flex;gap:9px;align-items:flex-start}
+.task .mark{margin-top:.3em}
+.task .ok{color:var(--focus);font-weight:700;margin-top:4px}
+.task .btn{margin-top:6px}
+.tour-nav{display:flex;justify-content:space-between;gap:10px;margin-top:12px}
+.btn.primary{background:var(--focus);border-color:var(--focus);color:#fff;font-weight:700}
+:root[data-theme="dark"] .btn.primary{color:#0c1620}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0c1620}}
+@media (max-width:700px){
+  .tour,.tour.left,.tour.center,.tour.tl{left:10px;right:10px;width:auto;top:auto;transform:none;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:42vh}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}.spot{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div class="topline">
+    <h1>内部と閉包を描いてみる</h1>
+    <button class="btn guide-btn" id="openGuide" type="button">使い方ガイド</button>
+  </div>
+  <p class="lede"><span class="m">ℝ<sup>2</sup></span> の部分集合について，点が内点・境界点・外点のどれなのかを調べたり，内部・閉包・境界を図で確かめたりできます。</p>
+  <nav class="views" role="tablist" aria-label="ページの切り替え" id="viewTabs">
+    <button role="tab" type="button" aria-selected="true" data-view="ex">具体例で調べる</button>
+    <button role="tab" type="button" aria-selected="false" data-view="cells">セルで描いて調べる</button>
+  </nav>
+</header>
+
+<div id="viewEx">
+<main class="lab exlab">
+  <section aria-label="具体例の図">
+    <div class="toolbar">
+      <span class="small">表示</span>
+      <div class="seg" role="radiogroup" aria-label="表示する集合" id="exViewSeg">
+        <button role="radio" type="button" aria-checked="true" data-exview="A">A</button>
+        <button role="radio" type="button" aria-checked="false" data-exview="int">内部</button>
+        <button role="radio" type="button" aria-checked="false" data-exview="cl">閉包</button>
+        <button role="radio" type="button" aria-checked="false" data-exview="bd">境界</button>
+        <button role="radio" type="button" aria-checked="false" data-exview="ext">外部</button>
+      </div>
+      <div class="seg" aria-label="拡大と縮小">
+        <button type="button" id="zIn">拡大</button><button type="button" id="zOut">縮小</button><button type="button" id="zReset">元に戻す</button>
+      </div>
+      <span class="small" id="zLabel"></span>
+      <div class="seg" role="radiogroup" aria-label="近傍の表示" id="exNbSeg">
+        <button role="radio" type="button" aria-checked="true" data-nb="none">近傍なし</button>
+        <button role="radio" type="button" aria-checked="false" data-nb="max">最大の近傍</button>
+        <button role="radio" type="button" aria-checked="false" data-nb="eps">半径 ε を固定</button>
+      </div>
+      <label class="exsel"><span class="small">例</span><select id="exSelect" aria-label="具体例を選ぶ"></select></label>
+    </div>
+    <div id="exBlock">
+      <div class="frame"><canvas id="exCv" class="excv" aria-label="具体例の図。クリックまたはドラッグで点 p を置くと，内点・境界点・外点の判定が右側に表示されます。"></canvas></div>
+      <p class="excap" id="exCap"></p>
+      <p class="excap">実線・黒丸は集合に含まれる部分，破線・白丸は含まれない部分です。図をクリック（ドラッグ）すると点 <span class="m"><i>p</i></span> が動き，線や点の近くでは吸い付きます。</p>
+    </div>
+  </section>
+  <section aria-label="点の判定" id="exRight">
+    <h2>点 <span class="m"><i>p</i></span> の判定</h2>
+    <p class="exnow" id="exNow"></p>
+    <div class="exstat" id="exPanel">
+      <div class="row" id="exQuizRow" style="margin-top:0"><label class="chk"><input type="checkbox" id="exQuiz">予想してから確かめる</label><span class="small" id="exScore"></span></div>
+      <div class="row" id="exEpsRow" hidden><label class="small" for="exEps"><span id="exEpsLab">近傍の半径</span> <span class="m"><i>ε</i></span> = <span id="exEpsVal"></span></label><input type="range" id="exEps" min="0" max="100" value="75"></div>
+      <div id="exStat" aria-live="polite"></div>
+    </div>
+  </section>
+</main>
+<section class="exbottom" id="exBottom" aria-label="具体例の一覧と説明">
+  <div>
+    <h2>具体例を選ぶ</h2>
+    <div class="exlist" id="exList"></div>
+  </div>
+  <div class="excard" id="exCard"></div>
+</section>
+</div>
+
+<div id="viewCells" class="hide">
+<p class="lede" style="margin-top:18px">平面を「頂点」「開いた辺」「開いた正方形」に分け，それらの和集合として集合 <span class="m"><i>A</i></span>, <span class="m"><i>B</i></span> を描きます。内部・閉包・補集合はセルの規則で計算され，ピクセル近似ではなく <span class="m">ℝ<sup>2</sup></span> での正確な答えになっています。</p>
+<main class="lab">
+  <section aria-label="集合の編集" id="edSec">
+    <div class="restore" id="restoreBar" hidden>
+      <span>ガイドの操作で図が変わりました。</span>
+      <button class="btn" id="restoreYes" type="button">ガイド前の図に戻す</button>
+      <button class="btn" id="restoreNo" type="button">このままにする</button>
+    </div>
+    <div class="toolbar">
+      <div class="seg" role="radiogroup" aria-label="編集する集合" id="layerSeg">
+        <button role="radio" aria-checked="true" data-layer="A">A を描く</button>
+        <button role="radio" aria-checked="false" data-layer="B">B を描く</button>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="操作" id="modeSeg">
+        <button role="radio" aria-checked="true" data-mode="paint">塗る</button>
+        <button role="radio" aria-checked="false" data-mode="probe">ε-球で調べる</button>
+      </div>
+      <span class="badge" id="badge"></span>
+    </div>
+    <div id="edBlock">
+    <div class="frame"><canvas id="ed" aria-label="集合を描くキャンバス。頂点・辺・正方形をクリックすると集合に入れたり外したりできます。"></canvas></div>
+    <div class="legend" aria-label="凡例">
+      <span><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4" fill="currentColor"/></svg>含む点</span>
+      <span><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>含まない点</span>
+      <span><svg width="26" height="10" viewBox="0 0 26 10"><line x1="1" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>含む辺</span>
+      <span><svg width="26" height="10" viewBox="0 0 26 10"><line x1="1" y1="5" x2="25" y2="5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/></svg>含まない辺</span>
+      <span><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" fill="currentColor" opacity=".25"/></svg>含む開正方形</span>
+      <span>内部にある辺・点は薄く表示</span>
+      <span>枠の外の余白＝平面の残り全部（1 つのセル）</span>
+    </div>
+    </div>
+
+    <div id="paintOpts">
+      <div class="row">
+        <label class="small" for="brush">塗り方</label>
+        <select id="brush">
+          <option value="cell">押したセルだけ</option>
+          <option value="closed">辺・頂点もまとめて（閉じた形）</option>
+        </select>
+        <label class="small" for="preset">例</label>
+        <select id="preset">
+          <option value="">読み込む例を選ぶ</option>
+          <optgroup label="A だけ">
+            <option value="open">開いた長方形</option>
+            <option value="closed">閉じた長方形</option>
+            <option value="half">辺の一部だけ含む長方形</option>
+            <option value="holes">穴とスリットのある閉長方形</option>
+            <option value="curve">折れ線と孤立点</option>
+          </optgroup>
+          <optgroup label="A と B">
+            <option value="pairInt">閉じた左側 A と開いた右側 B</option>
+            <option value="pairCl">隣り合う開いた長方形 A, B</option>
+            <option value="nested">開いた小長方形 A ⊂ 閉じた長方形 B</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="row">
+        <button class="btn" id="bComp">補集合に置き換え</button>
+        <button class="btn" id="bClear">消す</button>
+        <button class="btn" id="bSwap">A と B を入れ替え</button>
+        <label class="chk"><input type="checkbox" id="showOther" checked>もう一方の集合も薄く表示</label>
+      </div>
+      <p class="small" style="margin:8px 0 0">クリックで出し入れ，ドラッグで同じ種類のセル（頂点どうし・辺どうし・正方形どうし）をまとめて塗れます。</p>
+    </div>
+
+    <div id="probeOpts" class="hide">
+      <div class="row">
+        <label class="small" for="eps">半径 <span class="m"><i>ε</i></span> = <span id="epsVal"></span>（1 マス = 1）</label>
+        <input type="range" id="eps" min="0" max="100" value="62">
+      </div>
+      <div class="row">
+        <label class="chk"><input type="checkbox" id="showMet" checked>球と交わるセルを表示</label>
+        <label class="chk"><input type="checkbox" id="showBand">全点で判定して塗る（<span class="m"><i>ε</i></span>-内部と <span class="m"><i>ε</i></span>-帯）</label>
+      </div>
+      <p class="small" id="bandNote" style="margin:6px 0 0" hidden>濃い色：<span class="m">U(<i>q</i>; <i>ε</i>) ⊂ <i>A</i></span> となる点 <span class="m"><i>q</i></span>。赤：<span class="m">U(<i>q</i>; <i>ε</i>)</span> が <span class="m"><i>A</i></span> とも <span class="m"><i>A</i><sup>c</sup></span> とも交わる点。<span class="m"><i>ε</i></span> を小さくすると赤い帯は境界 <span class="m">∂<i>A</i></span> に縮みます。</p>
+      <div class="pstat" id="pstat" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section aria-label="計算と比較">
+    <div class="tabs" role="tablist" id="tabsBar">
+      <button role="tab" aria-selected="true" data-tab="dual" aria-controls="tab-dual">双対性</button>
+      <button role="tab" aria-selected="false" data-tab="ids" aria-controls="tab-ids">等式</button>
+      <button role="tab" aria-selected="false" data-tab="expr" aria-controls="tab-expr">式を入力</button>
+      <button role="tab" aria-selected="false" data-tab="kur" aria-controls="tab-kur">閉包と補集合で何個？</button>
+    </div>
+
+    <div role="tabpanel" id="tab-dual">
+      <div class="seg" role="radiogroup" aria-label="双対性の二つの等式" id="dualSeg">
+        <button role="radio" aria-checked="true" data-dual="1">(1)</button>
+        <button role="radio" aria-checked="false" data-dual="2">(2)</button>
+      </div>
+      <p class="formula m" id="dualFormula"></p>
+      <p class="flowlab" id="dualRow1"></p>
+      <div class="pair">
+        <figure><canvas class="mini" data-dual-i="0"></canvas><figcaption id="dcap0"></figcaption></figure>
+        <figure><canvas class="mini" data-dual-i="1"></canvas><figcaption id="dcap1"></figcaption></figure>
+      </div>
+      <p class="flowlab" id="dualRow2"></p>
+      <div class="pair">
+        <figure><canvas class="mini" data-dual-i="2"></canvas><figcaption id="dcap2"></figcaption></figure>
+        <figure><canvas class="mini" data-dual-i="3"></canvas><figcaption id="dcap3"></figcaption></figure>
+      </div>
+      <p class="verdict" id="dualVerdict"></p>
+      <div class="inspector" id="inspector" aria-live="polite"></div>
+      <details><summary>証明のアイデア</summary><div id="dualHint"></div></details>
+    </div>
+
+    <div role="tabpanel" id="tab-ids" class="hide">
+      <div class="idlist" id="idlist"></div>
+      <p class="formula m" id="idFormula"></p>
+      <div class="pair">
+        <figure><canvas class="mini" id="idL"></canvas><figcaption id="idLcap"></figcaption></figure>
+        <figure><canvas class="mini" id="idR"></canvas><figcaption id="idRcap"></figcaption></figure>
+      </div>
+      <p class="verdict" id="idVerdict"></p>
+      <details><summary>証明のアイデア・ヒント</summary><div id="idHint"></div></details>
+    </div>
+
+    <div role="tabpanel" id="tab-expr" class="hide">
+      <div class="exprrow">
+        <label>左辺<input type="text" id="lhs" value="cl(int(cl(A)))" spellcheck="false" autocomplete="off"></label>
+        <select id="rel" aria-label="関係"><option value="=">=</option><option value="⊂">⊂</option></select>
+        <label>右辺<input type="text" id="rhs" value="cl(int(A))" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <p class="err" id="exprErr"></p>
+      <p class="formula m" id="exFormula"></p>
+      <div class="pair">
+        <figure><canvas class="mini" id="exL"></canvas><figcaption id="exLcap"></figcaption></figure>
+        <figure><canvas class="mini" id="exR"></canvas><figcaption id="exRcap"></figcaption></figure>
+      </div>
+      <p class="verdict" id="exVerdict"></p>
+      <div class="row"><button class="btn" id="exToA">左辺の集合を A に読み込む</button></div>
+      <details><summary>式の書き方</summary>
+        <p><code>int(…)</code> 内部，<code>cl(…)</code> 閉包，<code>bd(…)</code> 境界，<code>…^c</code> または <code>c(…)</code> 補集合。</p>
+        <p><code>|</code> 和集合，<code>&amp;</code> 共通部分，<code>-</code> 差。<code>X</code> は <span class="m">ℝ<sup>2</sup></span> 全体，<code>0</code> は空集合。∪ ∩ ∖ を直接入力しても構いません。</p>
+        <p>例：<code>bd(A) - (cl(A) - A)</code>，<code>int(A|B) - (int(A)|int(B))</code></p>
+      </details>
+    </div>
+
+    <div role="tabpanel" id="tab-kur" class="hide">
+      <p style="margin:0 0 6px;font-size:.92rem"><span class="m"><i>A</i></span> から出発して閉包と補集合を何度でもとり，できる異なる集合をすべて並べます。</p>
+      <p class="verdict" id="kurCount"></p>
+      <div class="thumbs" id="kurThumbs"></div>
+      <details><summary>一般の空間では最大 14 個，ここでは最大 10 個になる理由</summary><div id="kurHint"></div></details>
+    </div>
+  </section>
+</main>
+
+<section class="guide" id="guideSec">
+  <div>
+    <h2>操作の早見表</h2>
+    <dl class="ref">
+      <dt>セルを出し入れする</dt><dd>頂点・辺・正方形をクリックします。辺や頂点は線や点のすぐ近くをクリックすると選べます。枠の外の余白も 1 つのセルです。</dd>
+      <dt>まとめて塗る</dt><dd>ドラッグすると，最初に押したのと同じ種類のセルをまとめて塗ります。「塗り方」を「辺・頂点もまとめて」にすると，閉じた形で塗ったり消したりできます。</dd>
+      <dt>A と B を切り替える</dt><dd>「A を描く」「B を描く」で編集する集合を選びます。もう一方は薄く表示されます。</dd>
+      <dt>ε-球で調べる</dt><dd>点 <span class="m"><i>p</i></span> をマウスや指で動かし，半径 <span class="m"><i>ε</i></span> はスライダーで変えます。辺や頂点の近くでは <span class="m"><i>p</i></span> が吸い付きます。</dd>
+      <dt>右側のタブ</dt><dd>閉包と内部の双対性を確かめる 4 枚の図（セルをクリックすると理由を表示），等式の検証，自由な式の比較，閉包と補集合で作れる集合の一覧があります。</dd>
+      <dt>図を共有する</dt><dd>ページ下の「状態コード」をリンクの末尾に <code>#コード</code> として付けると，その図で開きます。</dd>
+    </dl>
+  </div>
+  <div id="challenges">
+    <h2>挑戦課題</h2>
+    <p class="small" style="margin:4px 0">条件を満たす図を自分の操作で描くと，自動で印がつきます（例を読み込んだだけでは数えません。例から描き換えるのは構いません）。</p>
+    <ul class="chal" id="chalList"></ul>
+    <p class="small" id="orbCounts" style="margin:6px 0"></p>
+    <details><summary>個数が奇数にならないのはなぜ？</summary><p>補集合をとる操作は，作れる集合の全体をそれ自身に移します。どんな集合 <span class="m"><i>X</i></span> についても <span class="m"><i>X</i> ≠ <i>X</i><sup>c</sup></span> なので，作れる集合は <span class="m"><i>X</i></span> と <span class="m"><i>X</i><sup>c</sup></span> のペアに分かれます。</p></details>
+    <div class="row"><button class="btn" id="chalReset" type="button">記録を消す</button></div>
+  </div>
+</section>
+
+<section class="about">
+  <div>
+    <h2>このモデルが正確である理由</h2>
+    <p>平面はセル（頂点，開いた辺，開いた正方形，枠の外側）に分割されています。セル <span class="m"><i>σ</i></span> 上の点 <span class="m"><i>p</i></span> を中心とする <span class="m"><i>ε</i></span>-球は，<span class="m"><i>ε</i></span> が十分小さいと「<span class="m"><i>σ</i></span> を辺や頂点として含むセル」（<span class="m"><i>σ</i></span> の星）とだけ交わります。したがって集合がセルの和集合なら，</p>
+    <p style="padding-left:1.2em"><span class="m"><i>p</i> ∈ <i>A</i><sup><i>o</i></sup></span> ⟺ <span class="m"><i>σ</i></span> の星がすべて <span class="m"><i>A</i></span> に入っている，<br><span class="m"><i>p</i> ∈ <span class="ov"><i>A</i></span></span> ⟺ <span class="m"><i>σ</i></span> の星のどれかが <span class="m"><i>A</i></span> に入っている。</p>
+    <p>内部と閉包もセルの和集合になるので，この世界の中で計算が閉じています。「ε-球で調べる」で <span class="m"><i>ε</i></span> を小さくしていくと，交わるセルがちょうど星になる瞬間が見えます。ただし <span class="m">ℚ<sup>2</sup></span> や <span class="m">sin(1/<i>x</i>)</span> のグラフのように，セルの和集合で書けない集合は扱えません。</p>
+  </div>
+  <div>
+    <h2>状態を共有する</h2>
+    <p class="small" style="margin:4px 0">このページのリンクの末尾に <code>#コード</code> を付けると，いまの <span class="m"><i>A</i></span>, <span class="m"><i>B</i></span> で開きます。課題の配布に使えます。</p>
+    <div class="codebox"><input type="text" id="code" readonly aria-label="状態コード"><button class="btn" id="copyCode">コードをコピー</button></div>
+    <div class="codebox"><input type="text" id="loadCode" placeholder="コードを貼り付け" aria-label="読み込むコード"><button class="btn" id="loadBtn">読み込む</button></div>
+    <p class="small" id="codeMsg" aria-live="polite"></p>
+  </div>
+</section>
+</div>
+</div>
+
+<div class="spot" id="spot" hidden></div>
+<div class="tour" id="tour" role="dialog" aria-labelledby="tourTitle" hidden>
+  <div class="tour-head"><span class="small" id="tourStep"></span><button class="x" id="tourClose" type="button" aria-label="ガイドを閉じる">×</button></div>
+  <h2 id="tourTitle"></h2>
+  <div id="tourBody"></div>
+  <div class="task" id="tourTask" aria-live="polite" hidden></div>
+  <div class="tour-nav"><button class="btn" id="tourBack" type="button">戻る</button><button class="btn primary" id="tourNext" type="button">次へ</button></div>
+</div>
+<script>
+// CORE-BEGIN
+const N = 8, M = 6;
+const nV = (N+1)*(M+1), nH = N*(M+1), nE = (N+1)*M, nS = N*M;
+const OH = nV, OE = nV+nH, OS = nV+nH+nE, XID = OS+nS, T = XID+1;
+const vid = (i,j) => i*(M+1)+j;            // 0<=i<=N, 0<=j<=M
+const hid = (i,j) => OH + i*(M+1) + j;     // 0<=i<N,  0<=j<=M : (i,j)-(i+1,j)
+const eid = (i,j) => OE + i*M + j;         // 0<=i<=N, 0<=j<M  : (i,j)-(i,j+1)
+const sid = (i,j) => OS + i*M + j;         // 0<=i<N,  0<=j<M  : (i,i+1)x(j,j+1)
+function info(k){
+  if (k < OH) return {t:'v', i:Math.floor(k/(M+1)), j:k%(M+1)};
+  if (k < OE){ const r=k-OH; return {t:'h', i:Math.floor(r/(M+1)), j:r%(M+1)}; }
+  if (k < OS){ const r=k-OE; return {t:'e', i:Math.floor(r/M), j:r%M}; }
+  if (k < XID){ const r=k-OS; return {t:'s', i:Math.floor(r/M), j:r%M}; }
+  return {t:'x'};
+}
+const dimOf = k => { const t=info(k).t; return t==='v'?0:(t==='h'||t==='e')?1:2; };
+// FACES[k]: cells contained in the closure of cell k (including k).  STAR[k]: cells whose closure contains k.
+const FACES = [], STAR = Array.from({length:T}, () => []);
+for (let k=0; k<T; k++){
+  const c = info(k); let f;
+  if (c.t==='v') f=[k];
+  else if (c.t==='h') f=[k, vid(c.i,c.j), vid(c.i+1,c.j)];
+  else if (c.t==='e') f=[k, vid(c.i,c.j), vid(c.i,c.j+1)];
+  else if (c.t==='s') f=[k, hid(c.i,c.j), hid(c.i,c.j+1), eid(c.i,c.j), eid(c.i+1,c.j),
+                         vid(c.i,c.j), vid(c.i+1,c.j), vid(c.i,c.j+1), vid(c.i+1,c.j+1)];
+  else {
+    f=[k];
+    for (let i=0;i<=N;i++) for (let j=0;j<=M;j++) if (i===0||i===N||j===0||j===M) f.push(vid(i,j));
+    for (let i=0;i<N;i++){ f.push(hid(i,0)); f.push(hid(i,M)); }
+    for (let j=0;j<M;j++){ f.push(eid(0,j)); f.push(eid(N,j)); }
+  }
+  FACES[k]=f;
+  for (const t of f) STAR[t].push(k);
+}
+const Top = {
+  empty: () => new Uint8Array(T),
+  full:  () => new Uint8Array(T).fill(1),
+  comp:  A => A.map(x => 1-x),
+  union: (A,B) => A.map((x,k) => x|B[k]),
+  inter: (A,B) => A.map((x,k) => x&B[k]),
+  minus: (A,B) => A.map((x,k) => x&(1-B[k])),
+  xor:   (A,B) => A.map((x,k) => x^B[k]),
+  cl: A => { const R=new Uint8Array(T); for (let k=0;k<T;k++){ for (const t of STAR[k]) if (A[t]){ R[k]=1; break; } } return R; },
+  int: A => { const R=new Uint8Array(T); for (let k=0;k<T;k++){ let ok=1; for (const t of STAR[k]) if (!A[t]){ ok=0; break; } R[k]=ok; } return R; },
+  bd: A => Top.inter(Top.cl(A), Top.cl(Top.comp(A))),
+  eq: (A,B) => { for (let k=0;k<T;k++) if (A[k]!==B[k]) return false; return true; },
+  sub: (A,B) => { for (let k=0;k<T;k++) if (A[k] && !B[k]) return false; return true; },
+  count: A => { let s=0; for (let k=0;k<T;k++) s+=A[k]; return s; },
+};
+function rect(i0,j0,i1,j1,closed){
+  const R=Top.empty();
+  for (let i=i0;i<i1;i++) for (let j=j0;j<j1;j++) R[sid(i,j)]=1;
+  for (let i=i0;i<i1;i++) for (let j=j0;j<=j1;j++) if (closed || (j>j0 && j<j1)) R[hid(i,j)]=1;
+  for (let i=i0;i<=i1;i++) for (let j=j0;j<j1;j++) if (closed || (i>i0 && i<i1)) R[eid(i,j)]=1;
+  for (let i=i0;i<=i1;i++) for (let j=j0;j<=j1;j++) if (closed || (i>i0 && i<i1 && j>j0 && j<j1)) R[vid(i,j)]=1;
+  return R;
+}
+function halfOpen(i0,j0,i1,j1){
+  const R=rect(i0,j0,i1,j1,false);
+  for (let j=j0;j<j1;j++){ R[eid(i0,j)]=1; R[vid(i0,j)]=1; }
+  for (let i=i0;i<i1;i++){ R[hid(i,j0)]=1; R[vid(i,j0)]=1; }
+  return R;
+}
+// ---- geometry of open balls (grid units) ----
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+function distCell(k,x,y){ // distance from (x,y) to the closure of cell k
+  const c=info(k);
+  if (c.t==='v') return Math.hypot(x-c.i, y-c.j);
+  if (c.t==='h'){ const dx=Math.max(c.i-x,0,x-(c.i+1)); return Math.hypot(dx, y-c.j); }
+  if (c.t==='e'){ const dy=Math.max(c.j-y,0,y-(c.j+1)); return Math.hypot(x-c.i, dy); }
+  if (c.t==='s'){ const dx=Math.max(c.i-x,0,x-(c.i+1)), dy=Math.max(c.j-y,0,y-(c.j+1)); return Math.hypot(dx,dy); }
+  if (x<=0||x>=N||y<=0||y>=M) return 0;
+  return Math.min(x, N-x, y, M-y);
+}
+function forCandidates(x,y,eps,fn){ // calls fn(k) for every cell that may meet U((x,y);eps); stop if fn returns true
+  const i0=Math.max(0,Math.floor(x-eps)-1), i1=Math.min(N,Math.ceil(x+eps)+1);
+  const j0=Math.max(0,Math.floor(y-eps)-1), j1=Math.min(M,Math.ceil(y+eps)+1);
+  for (let i=i0;i<=i1;i++) for (let j=j0;j<=j1;j++){
+    if (fn(vid(i,j))) return;
+    if (i<N && fn(hid(i,j))) return;
+    if (j<M && fn(eid(i,j))) return;
+    if (i<N && j<M && fn(sid(i,j))) return;
+  }
+  fn(XID);
+}
+// An open ball meets an open cell iff the distance from the centre to the cell's closure is < eps.
+function ballCells(x,y,eps){
+  const out=[]; forCandidates(x,y,eps,k => { if (distCell(k,x,y)<eps) out.push(k); return false; }); return out;
+}
+function ballClass(x,y,eps,A){ // 2: ball ⊂ A, 0: ball ⊂ A^c, 1: meets both
+  let hin=false, hout=false;
+  forCandidates(x,y,eps,k => {
+    if (distCell(k,x,y)<eps){ if (A[k]) hin=true; else hout=true; }
+    return hin && hout;
+  });
+  return hin ? (hout?1:2) : 0;
+}
+function witness(k,x,y,eps){ // a point of the OPEN cell k inside U((x,y);eps), assuming they meet
+  const c=info(k);
+  if (c.t==='v') return {x:c.i, y:c.j};
+  if (c.t==='x'){
+    if (x<0||x>N||y<0||y>M) return {x,y};
+    const d=[x, N-x, y, M-y]; let m=0; for (let s=1;s<4;s++) if (d[s]<d[m]) m=s;
+    const t=Math.min(0.5, 0.5*(eps-d[m]));
+    return m===0?{x:-t,y}: m===1?{x:N+t,y}: m===2?{x,y:-t}: {x,y:M+t};
+  }
+  let qx,qy,cx,cy;
+  if (c.t==='h'){ qx=clamp(x,c.i,c.i+1); qy=c.j; cx=c.i+0.5; cy=c.j; }
+  else if (c.t==='e'){ qx=c.i; qy=clamp(y,c.j,c.j+1); cx=c.i; cy=c.j+0.5; }
+  else { qx=clamp(x,c.i,c.i+1); qy=clamp(y,c.j,c.j+1); cx=c.i+0.5; cy=c.j+0.5; }
+  const slack=eps-Math.hypot(qx-x,qy-y), L=Math.hypot(cx-qx,cy-qy);
+  const t = L>1e-12 ? Math.min(1, 0.5*slack/L) : 0;
+  return {x:qx+t*(cx-qx), y:qy+t*(cy-qy)};
+}
+// ---- expressions ----
+function tokenize(s){
+  const toks=[]; let i=0;
+  while (i<s.length){
+    const ch=s[i];
+    if (/\s/.test(ch)){ i++; continue; }
+    if (s.startsWith('int',i)){ toks.push({t:'fn',v:'int'}); i+=3; continue; }
+    if (s.startsWith('cl',i)){ toks.push({t:'fn',v:'cl'}); i+=2; continue; }
+    if (s.startsWith('bd',i)){ toks.push({t:'fn',v:'bd'}); i+=2; continue; }
+    if (s.startsWith('^c',i)){ toks.push({t:'post',v:'c'}); i+=2; continue; }
+    if (s.startsWith('ℝ²',i)){ toks.push({t:'id',v:'X'}); i+=2; continue; }
+    if (ch==='c'){ toks.push({t:'fn',v:'c'}); i++; continue; }
+    if ('ᶜ\''.includes(ch)){ toks.push({t:'post',v:'c'}); i++; continue; }
+    if ('°∘'.includes(ch)){ toks.push({t:'post',v:'int'}); i++; continue; }
+    if ('∪|+'.includes(ch)){ toks.push({t:'op',v:'∪'}); i++; continue; }
+    if ('∩&*'.includes(ch)){ toks.push({t:'op',v:'∩'}); i++; continue; }
+    if ('∖\\-'.includes(ch)){ toks.push({t:'op',v:'∖'}); i++; continue; }
+    if ('AB'.includes(ch)){ toks.push({t:'id',v:ch}); i++; continue; }
+    if ('XRℝ'.includes(ch)){ toks.push({t:'id',v:'X'}); i++; continue; }
+    if ('∅0'.includes(ch)){ toks.push({t:'id',v:'∅'}); i++; continue; }
+    if (ch==='('||ch===')'){ toks.push({t:ch}); i++; continue; }
+    throw new Error(`「${ch}」は使えない文字です`);
+  }
+  return toks;
+}
+function parse(str){
+  const toks=tokenize(str); let p=0;
+  if (!toks.length) throw new Error('式が空です');
+  const peek=()=>toks[p], next=()=>toks[p++];
+  const close=()=>{ const t=next(); if (!t||t.t!==')') throw new Error('「)」が足りません'); };
+  function expr(){ let n=term(); while (peek() && peek().t==='op' && peek().v!=='∩'){ const op=next().v; n={op, a:n, b:term()}; } return n; }
+  function term(){ let n=factor(); while (peek() && peek().t==='op' && peek().v==='∩'){ next(); n={op:'∩', a:n, b:factor()}; } return n; }
+  function factor(){ let n=primary(); while (peek() && peek().t==='post'){ n={op:next().v, a:n}; } return n; }
+  function primary(){
+    const tk=next();
+    if (!tk) throw new Error('式が途中で終わっています');
+    if (tk.t==='id') return {op:'id', v:tk.v};
+    if (tk.t==='fn'){ const t2=next(); if (!t2||t2.t!=='(') throw new Error(`${tk.v} のあとには「(」が必要です`); const a=expr(); close(); return {op:tk.v, a}; }
+    if (tk.t==='('){ const a=expr(); close(); return a; }
+    throw new Error('式の形が正しくありません');
+  }
+  const n=expr(); if (p<toks.length) throw new Error('余分な記号があります'); return n;
+}
+function evalE(n,env){
+  switch (n.op){
+    case 'id': return n.v==='X'?Top.full(): n.v==='∅'?Top.empty(): env[n.v];
+    case 'c': return Top.comp(evalE(n.a,env));
+    case 'int': return Top.int(evalE(n.a,env));
+    case 'cl': return Top.cl(evalE(n.a,env));
+    case 'bd': return Top.bd(evalE(n.a,env));
+    case '∪': return Top.union(evalE(n.a,env),evalE(n.b,env));
+    case '∩': return Top.inter(evalE(n.a,env),evalE(n.b,env));
+    case '∖': return Top.minus(evalE(n.a,env),evalE(n.b,env));
+  }
+}
+const isBin = n => n.op==='∪'||n.op==='∩'||n.op==='∖';
+const isPost = n => n.op==='c'||n.op==='int';
+function pretty(n){
+  const wrapP = a => (isBin(a)||isPost(a)||a.op==='bd') ? `(${pretty(a)})` : pretty(a);
+  switch (n.op){
+    case 'id': return n.v==='X'?'ℝ<sup>2</sup>': n.v==='∅'?'∅':`<i>${n.v}</i>`;
+    case 'c': return `${wrapP(n.a)}<sup>c</sup>`;
+    case 'int': return `${wrapP(n.a)}<sup><i>o</i></sup>`;
+    case 'cl': return `<span class="ov">${pretty(n.a)}</span>`;
+    case 'bd': return `∂${wrapP(n.a)}`;
+    default: {
+      const w = (a,right) => !isBin(a) ? pretty(a) : (a.op===n.op && n.op!=='∖' && !right) ? pretty(a) : (a.op===n.op && n.op!=='∖') ? pretty(a) : `(${pretty(a)})`;
+      return `${w(n.a,false)} ${n.op} ${w(n.b,true)}`;
+    }
+  }
+}
+function simplify(n){
+  if (n.a) n={...n, a:simplify(n.a)};
+  if (n.op==='c' && n.a.op==='c') return n.a.a;
+  if (n.op==='c' && n.a.op==='cl' && n.a.a.op==='c') return {op:'int', a:n.a.a.a};
+  return n;
+}
+function kuratowski(A){
+  const seen=new Map(), q=[{set:A, expr:{op:'id',v:'A'}}];
+  seen.set(A.join(''), q[0]);
+  while (q.length){
+    const cur=q.shift();
+    for (const op of ['c','cl']){
+      const s2 = op==='c' ? Top.comp(cur.set) : Top.cl(cur.set);
+      const key=s2.join('');
+      if (!seen.has(key)){ const node={set:s2, expr:simplify({op, a:cur.expr})}; seen.set(key,node); q.push(node); }
+    }
+  }
+  return [...seen.values()];
+}
+function encodeState(A,B){
+  const bytes=new Uint8Array(Math.ceil(2*T/8));
+  for (let k=0;k<2*T;k++){ const bit = k<T ? A[k] : B[k-T]; if (bit) bytes[k>>3] |= 1<<(k&7); }
+  let bin=''; bytes.forEach(b => bin+=String.fromCharCode(b));
+  return 's1'+btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeState(tok){
+  tok=tok.trim().replace(/^#/,'');
+  if (!tok.startsWith('s1')) return null;
+  let b64=tok.slice(2).replace(/-/g,'+').replace(/_/g,'/'); while (b64.length%4) b64+='=';
+  let bin; try { bin=atob(b64); } catch(e){ return null; }
+  if (bin.length < Math.ceil(2*T/8)) return null;
+  const A=Top.empty(), B=Top.empty();
+  for (let k=0;k<2*T;k++){ const bit=(bin.charCodeAt(k>>3)>>(k&7))&1; if (k<T) A[k]=bit; else B[k-T]=bit; }
+  return {A,B};
+}
+// CORE-END
+
+// ================= UI =================
+const $ = id => document.getElementById(id);
+const F = s => { const m=s.split(/\s*(=|⊂)\s*/); return m.length===3 ? `${pretty(parse(m[0]))} ${m[1]} ${pretty(parse(m[2]))}` : pretty(parse(s)); };
+const FM = s => `<span class="m">${F(s)}</span>`;
+function cellName(k){
+  const c=info(k);
+  switch (c.t){
+    case 'v': return `頂点 (${c.i}, ${c.j})`;
+    case 'h': return `横の開いた辺 (${c.i}, ${c.j})–(${c.i+1}, ${c.j})`;
+    case 'e': return `縦の開いた辺 (${c.i}, ${c.j})–(${c.i}, ${c.j+1})`;
+    case 's': return `開正方形 (${c.i}, ${c.i+1})×(${c.j}, ${c.j+1})`;
+    default: return '枠の外側の領域';
+  }
+}
+const kindJa = k => ['頂点','辺','正方形'][dimOf(k)] + (k===XID?'（外側）':'');
+
+const st = {
+  A: Top.empty(), B: Top.empty(), layer:'A', mode:'paint', brush:'cell', showOther:true,
+  eps:0.5, band:false, met:true, probe:{x:4.5, y:3.5, k:sid(4,3)},
+  tab:'dual', dual:1, idIdx:1, focus:null, hover:null, edits:0, view:'ex',
+};
+const tour={on:false, i:0, snap:null, cleared:false, presets:new Set(), lastDone:null, steps:null, mark:0};
+(function initSets(){
+  const A=halfOpen(1,1,5,4); A[vid(3,2)]=0;
+  A[vid(7,1)]=1;
+  A[eid(6,3)]=1; A[eid(6,4)]=1; A[vid(6,3)]=1; A[vid(6,4)]=1;
+  st.A=A; st.B=rect(4,2,7,5,false);
+})();
+
+let PAL={};
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function refreshPalette(){ PAL={canvas:cssv('--canvas'), ink:cssv('--ink'), muted:cssv('--muted'), grid:cssv('--grid'), a:cssv('--a'), b:cssv('--b'), bad:cssv('--bad'), focus:cssv('--focus')}; }
+function rgba(hex,a){ const h=hex.replace('#',''); const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function rgb(hex){ const h=hex.replace('#',''); const n=parseInt(h,16); return [n>>16&255,n>>8&255,n&255]; }
+
+const MARGIN=0.6;
+function setup(cv){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
+  const W=Math.max(1,Math.round(w*dpr)), H=Math.max(1,Math.round(h*dpr));
+  if (cv.width!==W || cv.height!==H){ cv.width=W; cv.height=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const u=Math.min(w/(N+2*MARGIN), h/(M+2*MARGIN)), ox=(w-N*u)/2, oy=(h-M*u)/2;
+  return {ctx, g:{w,h,u,ox,oy, X:x=>ox+x*u, Y:y=>oy+(M-y)*u, toGrid:(px,py)=>({x:(px-ox)/u, y:M-(py-oy)/u})}};
+}
+function drawBase(ctx,g){
+  ctx.fillStyle=PAL.canvas; ctx.fillRect(0,0,g.w,g.h);
+  ctx.strokeStyle=PAL.grid; ctx.lineWidth=1; ctx.beginPath();
+  for (let i=0;i<=N;i++){ ctx.moveTo(g.X(i),g.Y(0)); ctx.lineTo(g.X(i),g.Y(M)); }
+  for (let j=0;j<=M;j++){ ctx.moveTo(g.X(0),g.Y(j)); ctx.lineTo(g.X(N),g.Y(j)); }
+  ctx.stroke();
+}
+function edgePath(ctx,g,k){
+  const c=info(k);
+  if (c.t==='h'){ ctx.moveTo(g.X(c.i),g.Y(c.j)); ctx.lineTo(g.X(c.i+1),g.Y(c.j)); }
+  else { ctx.moveTo(g.X(c.i),g.Y(c.j)); ctx.lineTo(g.X(c.i),g.Y(c.j+1)); }
+}
+const touches = (A,k) => { for (const t of STAR[k]) if (t!==k && A[t]) return true; return false; };
+function drawSet(ctx,g,A,color,opt={}){
+  const u=g.u, faded=!!opt.faded;
+  ctx.save();
+  if (faded) ctx.globalAlpha=0.4;
+  ctx.fillStyle=rgba(color, faded?0.45:0.22);
+  if (A[XID]){ ctx.beginPath(); ctx.rect(0,0,g.w,g.h); ctx.rect(g.X(0),g.Y(M),N*u,M*u); ctx.fill('evenodd'); }
+  ctx.beginPath();
+  for (let i=0;i<N;i++) for (let j=0;j<M;j++) if (A[sid(i,j)]) ctx.rect(g.X(i),g.Y(j+1),u,u);
+  ctx.fill();
+  const lwS=Math.max(2.3,u*0.055), lwD=Math.max(1.3,u*0.028), r=Math.max(3,u*0.068);
+  // edges/vertices in the interior of A are not marked (textbook convention); the editor shows them faintly
+  const inner = k => { for (const t of STAR[k]) if (!A[t]) return false; return true; };
+  if (opt.ghost){
+    ctx.save(); ctx.strokeStyle=rgba(color,0.45); ctx.lineWidth=Math.max(1.2,u*0.022); ctx.beginPath();
+    for (let k=OH;k<OS;k++) if (A[k] && inner(k)) edgePath(ctx,g,k);
+    ctx.stroke(); ctx.fillStyle=rgba(color,0.5); ctx.beginPath();
+    for (let k=0;k<OH;k++) if (A[k] && inner(k)){ const c=info(k); ctx.moveTo(g.X(c.i)+r*0.55,g.Y(c.j)); ctx.arc(g.X(c.i),g.Y(c.j),r*0.55,0,2*Math.PI); }
+    ctx.fill(); ctx.restore();
+  }
+  ctx.strokeStyle=color; ctx.lineWidth=lwS; ctx.lineCap='round'; ctx.beginPath();
+  for (let k=OH;k<OS;k++) if (A[k] && !inner(k)) edgePath(ctx,g,k);
+  ctx.stroke();
+  if (!faded){
+    ctx.lineWidth=lwD; ctx.lineCap='butt'; ctx.setLineDash([u*0.1,u*0.085]); ctx.beginPath();
+    for (let k=OH;k<OS;k++) if (!A[k] && touches(A,k)) edgePath(ctx,g,k);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.fillStyle=color; ctx.beginPath();
+  for (let k=0;k<OH;k++) if (A[k] && !inner(k)){ const c=info(k); ctx.moveTo(g.X(c.i)+r,g.Y(c.j)); ctx.arc(g.X(c.i),g.Y(c.j),r,0,2*Math.PI); }
+  ctx.fill();
+  if (!faded){
+    ctx.lineWidth=lwD; ctx.strokeStyle=color; ctx.fillStyle=PAL.canvas;
+    for (let k=0;k<OH;k++) if (!A[k] && touches(A,k)){ const c=info(k); ctx.beginPath(); ctx.arc(g.X(c.i),g.Y(c.j),r,0,2*Math.PI); ctx.fill(); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawCells(ctx,g,cells,color,o={}){
+  const u=g.u, lw=o.lw||2, fillA=o.fill||0, r=Math.max(3,u*0.068);
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=lw; if (o.dash) ctx.setLineDash(o.dash);
+  for (const k of cells){
+    const c=info(k);
+    if (c.t==='s'){
+      const x=g.X(c.i), y=g.Y(c.j+1), ins=lw/2+2.5;
+      if (fillA){ ctx.fillStyle=rgba(color,fillA); ctx.fillRect(x,y,u,u); }
+      ctx.strokeRect(x+ins,y+ins,u-2*ins,u-2*ins);
+    } else if (c.t==='x'){
+      if (fillA){ ctx.fillStyle=rgba(color,fillA); ctx.beginPath(); ctx.rect(0,0,g.w,g.h); ctx.rect(g.X(0),g.Y(M),N*u,M*u); ctx.fill('evenodd'); }
+      ctx.strokeRect(lw/2+2,lw/2+2,g.w-lw-4,g.h-lw-4);
+    } else if (c.t==='v'){
+      if (fillA){ ctx.fillStyle=rgba(color,fillA); ctx.beginPath(); ctx.arc(g.X(c.i),g.Y(c.j),r*2.4,0,2*Math.PI); ctx.fill(); }
+      ctx.beginPath(); ctx.arc(g.X(c.i),g.Y(c.j),r*2.1,0,2*Math.PI); ctx.stroke();
+    } else {
+      ctx.save(); ctx.setLineDash([]); ctx.strokeStyle=rgba(color, fillA?0.55:0.4); ctx.lineWidth=Math.max(7,u*0.16); ctx.lineCap='round';
+      ctx.beginPath(); edgePath(ctx,g,k); ctx.stroke(); ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+function label(ctx,x,y,text,color,align='left'){
+  ctx.save(); ctx.font=`italic 15px ${cssv('--serif')}`; ctx.fillStyle=color; ctx.textBaseline='middle'; ctx.textAlign=align;
+  ctx.lineWidth=3; ctx.strokeStyle=PAL.canvas; ctx.strokeText(text,x,y); ctx.fillText(text,x,y); ctx.restore();
+}
+function hitTest(g,px,py){
+  const {x,y}=g.toGrid(px,py);
+  const tolV=Math.max(10,g.u*0.17)/g.u, tolE=Math.max(7,g.u*0.12)/g.u;
+  const ri=Math.round(x), rj=Math.round(y);
+  if (ri>=0 && ri<=N && rj>=0 && rj<=M && Math.hypot(x-ri,y-rj)<tolV) return {k:vid(ri,rj), x:ri, y:rj};
+  let best=null, bd=tolE;
+  if (rj>=0 && rj<=M && x>0 && x<N && Math.abs(y-rj)<bd){ bd=Math.abs(y-rj); best={k:hid(Math.floor(x),rj), x, y:rj}; }
+  if (ri>=0 && ri<=N && y>0 && y<M && Math.abs(x-ri)<bd){ bd=Math.abs(x-ri); best={k:eid(ri,Math.floor(y)), x:ri, y}; }
+  if (best) return best;
+  if (x>0 && x<N && y>0 && y<M) return {k:sid(Math.floor(x),Math.floor(y)), x, y};
+  return {k:XID, x, y};
+}
+
+// ---------- editor ----------
+const ed=$('ed'); let EDG=null; let bandCache={key:'', img:null};
+const actSet = () => st[st.layer];
+const actName = () => st.layer;
+const actColor = () => st.layer==='A' ? PAL.a : PAL.b;
+function setBadge(){
+  const A=actSet(), o=Top.eq(A,Top.int(A)), c=Top.eq(A,Top.cl(A)), L=actName();
+  $('badge').innerHTML = `<span class="m"><i>${L}</i></span> は` + (o&&c?'開集合かつ閉集合': o?'開集合': c?'閉集合':'開集合でも閉集合でもない');
+}
+function epsFromSlider(v){ return 0.03*Math.pow(40, v/100); }
+function bandImage(g,A,eps){
+  const key=[A.join(''),eps.toFixed(4),g.w,g.h,PAL.a,PAL.bad].join('|');
+  if (bandCache.key===key) return bandCache.img;
+  const step=3, W=Math.ceil(g.w/step), H=Math.ceil(g.h/step);
+  const off=document.createElement('canvas'); off.width=W; off.height=H;
+  const octx=off.getContext('2d'), img=octx.createImageData(W,H);
+  const ca=rgb(actColor()), cb=rgb(PAL.bad);
+  for (let py=0;py<H;py++) for (let px=0;px<W;px++){
+    const p=g.toGrid((px+0.5)*step,(py+0.5)*step), c=ballClass(p.x,p.y,eps,A), o=(py*W+px)*4;
+    if (c===2){ img.data[o]=ca[0]; img.data[o+1]=ca[1]; img.data[o+2]=ca[2]; img.data[o+3]=80; }
+    else if (c===1){ img.data[o]=cb[0]; img.data[o+1]=cb[1]; img.data[o+2]=cb[2]; img.data[o+3]=105; }
+  }
+  octx.putImageData(img,0,0);
+  bandCache={key, img:off}; return off;
+}
+function renderEditor(){
+  const {ctx,g}=setup(ed); EDG=g;
+  drawBase(ctx,g);
+  const other = st.layer==='A' ? st.B : st.A, oc = st.layer==='A' ? PAL.b : PAL.a;
+  if (st.showOther) drawSet(ctx,g,other,oc,{faded:true});
+  const A=actSet();
+  drawSet(ctx,g,A,actColor(),{ghost:true});
+  if (st.mode==='paint' && st.hover!=null) drawCells(ctx,g,[st.hover],PAL.focus,{lw:1.5});
+  if (st.tab==='dual' && st.focus!=null && st.mode==='paint'){
+    drawCells(ctx,g,STAR[st.focus],PAL.focus,{lw:1.4,dash:[4,3]});
+    drawCells(ctx,g,[st.focus],PAL.focus,{lw:3});
+  }
+  if (st.mode==='probe') renderProbe(ctx,g,A);
+  setBadge();
+}
+function renderProbe(ctx,g,A){
+  const eps=st.eps, p=st.probe, L=actName();
+  if (st.band){ const img=bandImage(g,A,eps); ctx.save(); ctx.imageSmoothingEnabled=true; ctx.drawImage(img,0,0,img.width*3,img.height*3); ctx.restore(); }
+  const met=ballCells(p.x,p.y,eps);
+  if (st.met) drawCells(ctx,g,met,PAL.focus,{lw:1.3,dash:[3,3]});
+  const inA=met.filter(k=>A[k]), outA=met.filter(k=>!A[k]);
+  const cls = inA.length && outA.length ? 1 : inA.length ? 2 : 0;
+  const col = cls===2 ? actColor() : cls===0 ? PAL.muted : PAL.bad;
+  const X=g.X(p.x), Y=g.Y(p.y), R=eps*g.u;
+  ctx.save(); ctx.fillStyle=rgba(col,0.09); ctx.strokeStyle=col; ctx.lineWidth=1.8; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.arc(X,Y,R,0,2*Math.PI); ctx.fill(); ctx.stroke(); ctx.restore();
+  const pick = list => { let best=null, bd=1e9; for (const k of list){ const d = k===p.k ? -1 : distCell(k,p.x,p.y); if (d<bd){ bd=d; best=k; } } return best; };
+  const kin=pick(inA), kout=pick(outA);
+  if (kout!=null && kout!==p.k){
+    const q=witness(kout,p.x,p.y,eps), qx=g.X(q.x), qy=g.Y(q.y), s=5;
+    ctx.save(); ctx.strokeStyle=PAL.bad; ctx.lineWidth=2.2; ctx.beginPath(); ctx.moveTo(qx-s,qy-s); ctx.lineTo(qx+s,qy+s); ctx.moveTo(qx+s,qy-s); ctx.lineTo(qx-s,qy+s); ctx.stroke(); ctx.restore();
+    label(ctx,qx+8,qy+13,`y ∉ ${L}`,PAL.bad);
+  }
+  if (kin!=null && kin!==p.k){
+    const q=witness(kin,p.x,p.y,eps), qx=g.X(q.x), qy=g.Y(q.y);
+    ctx.save(); ctx.fillStyle=actColor(); ctx.strokeStyle=PAL.canvas; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(qx,qy,5,0,2*Math.PI); ctx.fill(); ctx.stroke(); ctx.restore();
+    label(ctx,qx+8,qy+13,`x ∈ ${L}`,actColor());
+  }
+  ctx.save(); ctx.fillStyle=PAL.ink; ctx.beginPath(); ctx.arc(X,Y,3.2,0,2*Math.PI); ctx.fill(); ctx.restore();
+  label(ctx,X-7,Y-13,A[p.k]?`p ∈ ${L}`:`p ∉ ${L}`,PAL.ink,'right');
+  // status
+  const k=p.k, I=Top.int(A), C=Top.cl(A);
+  const yn = b => b ? '<span class="yes">はい</span>' : '<span class="no">いいえ</span>';
+  const star=new Set(STAR[k]), metSet=new Set(met);
+  const small = met.length===star.size && met.every(t=>star.has(t));
+  const fin = I[k] ? `<span class="m"><i>p</i> ∈ ${F(L==='A'?'int(A)':'int(B)')}</span>（内点）`
+            : C[k] ? `<span class="m"><i>p</i> ∈ ∂<i>${L}</i></span>（境界点：<span class="m"><i>${L}</i></span> の内点でも <span class="m"><i>${L}</i><sup>c</sup></span> の内点でもない）`
+            : `<span class="m"><i>p</i> ∈ (<i>${L}</i><sup>c</sup>)<sup><i>o</i></sup></span>（外点）`;
+  $('pstat').innerHTML =
+    `<div><span class="m"><i>p</i></span> は${cellName(k)}の点で，<span class="m"><i>${L}</i></span> に${A[k]?'属します':'属しません'}。</div>
+     <table>
+      <tr><td class="m">U(<i>p</i>; <i>ε</i>) ⊂ <i>${L}</i></td><td>${yn(cls===2)}</td><td></td></tr>
+      <tr><td class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>${L}</i> ≠ ∅</td><td>${yn(inA.length>0)}</td><td></td></tr>
+      <tr><td class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>${L}</i><sup>c</sup> ≠ ∅</td><td>${yn(outA.length>0)}</td><td class="small">1 行目の否定と同じ</td></tr>
+     </table>
+     <div>${small ? 'この <span class="m"><i>ε</i></span> は十分小さく，球が交わるセルはちょうど <span class="m"><i>p</i></span> を含むセルの星です。' : '<span class="m"><i>ε</i></span> をもっと小さくすると，判定が変わるかもしれません。'}</div>
+     <div>結論（十分小さい <span class="m"><i>ε</i></span> での判定）：${fin}</div>`;
+}
+// pointer handling
+let drag=null;
+function evPos(e,cv){ const r=cv.getBoundingClientRect(); return {px:e.clientX-r.left, py:e.clientY-r.top}; }
+function applyPaint(k,val){
+  const A=actSet(), list = st.brush==='closed' ? FACES[k] : [k];
+  let changed=false; for (const t of list) if (A[t]!==val){ A[t]=val; changed=true; }
+  if (changed) onSetsChanged(true);
+}
+ed.addEventListener('pointerdown', e => {
+  if (!EDG) return;
+  const {px,py}=evPos(e,ed), h=hitTest(EDG,px,py);
+  ed.setPointerCapture(e.pointerId);
+  if (st.mode==='probe'){ st.probe={x:h.x,y:h.y,k:h.k}; drag={probe:true}; schedule(); return; }
+  const val = actSet()[h.k] ? 0 : 1;
+  drag={val, dim:dimOf(h.k), last:h.k};
+  applyPaint(h.k,val);
+});
+ed.addEventListener('pointermove', e => {
+  if (!EDG) return;
+  const {px,py}=evPos(e,ed), h=hitTest(EDG,px,py);
+  if (st.mode==='probe'){
+    if (drag || e.pointerType==='mouse'){ st.probe={x:h.x,y:h.y,k:h.k}; schedule(); }
+    return;
+  }
+  if (st.hover!==h.k){ st.hover=h.k; schedule(); }
+  if (drag && !drag.probe && h.k!==drag.last && dimOf(h.k)===drag.dim){ drag.last=h.k; applyPaint(h.k,drag.val); }
+});
+const endDrag = () => { drag=null; };
+ed.addEventListener('pointerup', endDrag); ed.addEventListener('pointercancel', endDrag);
+ed.addEventListener('pointerleave', () => { if (st.hover!=null){ st.hover=null; schedule(); } });
+
+// ---------- tab: duality ----------
+const dualCanvases=[...document.querySelectorAll('canvas[data-dual-i]')];
+const DUAL = {
+  1:{ formula:'cl(c(A)) = c(int(A))', exprs:['c(A)','cl(c(A))','int(A)','c(int(A))'],
+      ops:['補集合','その閉包','内部','その補集合'], row1:'左辺：補集合をとってから閉包', row2:'右辺：内部をとってから補集合' },
+  2:{ formula:'c(cl(A)) = int(c(A))', exprs:['cl(A)','c(cl(A))','c(A)','int(c(A))'],
+      ops:['閉包','その補集合','補集合','その内部'], row1:'左辺：閉包をとってから補集合', row2:'右辺：補集合をとってから内部' },
+};
+function renderDual(){
+  const D=DUAL[st.dual], env={A:st.A, B:st.B};
+  $('dualFormula').innerHTML=F(D.formula);
+  $('dualRow1').textContent=D.row1; $('dualRow2').textContent=D.row2;
+  const sets=D.exprs.map(s=>evalE(parse(s),env));
+  dualCanvases.forEach((cv,i) => {
+    const {ctx,g}=setup(cv); cv._g=g;
+    drawBase(ctx,g); drawSet(ctx,g,sets[i],PAL.a);
+    if (st.focus!=null){
+      const wit = STAR[st.focus].filter(t => st.dual===1 ? !st.A[t] : st.A[t]);
+      drawCells(ctx,g,STAR[st.focus],PAL.focus,{lw:1.3,dash:[4,3]});
+      drawCells(ctx,g,wit,PAL.focus,{lw:1.3,fill:0.18});
+      drawCells(ctx,g,[st.focus],PAL.focus,{lw:2.6});
+    }
+    $('dcap'+i).innerHTML=`${D.ops[i]}　${FM(D.exprs[i])}`;
+  });
+  const eq=Top.eq(sets[1],sets[3]);
+  const v=$('dualVerdict'); v.className='verdict '+(eq?'ok':'ng');
+  v.innerHTML = eq ? `右の 2 枚 ${FM(D.exprs[1])} と ${FM(D.exprs[3])} は一致しています。<span class="m"><i>A</i></span> をどう描き換えても一致し続けます。`
+                   : '一致していません（このモデルでは起こらないはずです）。';
+  renderInspector();
+  $('dualHint').innerHTML = st.dual===1 ? HINT.d1 : HINT.d2;
+}
+function renderInspector(){
+  const box=$('inspector');
+  if (st.focus==null){ box.innerHTML='下の 4 枚のどれかでセルをクリックすると，そのセルがなぜ入る（入らない）のかを表示します。'; return; }
+  const k=st.focus, star=STAR[k], A=st.A;
+  const notIn=star.filter(t=>!A[t]), inA=star.filter(t=>A[t]);
+  const names = list => list.length ? list.map(t=>kindJa(t)).reduce((acc,x)=>{acc[x]=(acc[x]||0)+1;return acc;},{}) : null;
+  const fmt = list => { const n=names(list); return n ? Object.entries(n).map(([a,b])=>`${a} ${b} 個`).join('，') : 'なし'; };
+  let html=`<div>選んだセル <span class="m"><i>σ</i></span>：${cellName(k)}。<span class="m"><i>σ</i></span> の点 <span class="m"><i>p</i></span> の十分小さい球 <span class="m">U(<i>p</i>; <i>ε</i>)</span> が交わるのは，<span class="m"><i>σ</i></span> を含むセル（点線の枠，${star.length} 個）です。</div>`;
+  if (st.dual===1){
+    html+=`<div>そのうち <span class="m"><i>A</i></span> に入っていないセル（塗りつぶした枠）：${fmt(notIn)}。</div>`;
+    html+= notIn.length
+      ? `<div>1 つでもあるので，どの <span class="m"><i>ε</i></span> でも <span class="m">U(<i>p</i>; <i>ε</i>) ⊄ <i>A</i></span>，つまり <span class="m"><i>p</i> ∉ ${F('int(A)')}</span>。同じセルが <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i><sup>c</sup> ≠ ∅</span> も示すので <span class="m"><i>p</i> ∈ ${F('cl(c(A))')}</span>。</div>`
+      : `<div>1 つもないので，小さい <span class="m"><i>ε</i></span> で <span class="m">U(<i>p</i>; <i>ε</i>) ⊂ <i>A</i></span>，つまり <span class="m"><i>p</i> ∈ ${F('int(A)')}</span>。そのとき <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i><sup>c</sup> = ∅</span> なので <span class="m"><i>p</i> ∉ ${F('cl(c(A))')}</span>。</div>`;
+  } else {
+    html+=`<div>そのうち <span class="m"><i>A</i></span> に入っているセル（塗りつぶした枠）：${fmt(inA)}。</div>`;
+    html+= inA.length
+      ? `<div>1 つでもあるので，どの <span class="m"><i>ε</i></span> でも <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i> ≠ ∅</span>，つまり <span class="m"><i>p</i> ∈ ${F('cl(A)')}</span>。言い換えると <span class="m">U(<i>p</i>; <i>ε</i>) ⊄ <i>A</i><sup>c</sup></span> なので <span class="m"><i>p</i> ∉ ${F('int(c(A))')}</span>。</div>`
+      : `<div>1 つもないので，小さい <span class="m"><i>ε</i></span> で <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i> = ∅</span>，つまり <span class="m"><i>p</i> ∉ ${F('cl(A)')}</span>。言い換えると <span class="m">U(<i>p</i>; <i>ε</i>) ⊂ <i>A</i><sup>c</sup></span> なので <span class="m"><i>p</i> ∈ ${F('int(c(A))')}</span>。</div>`;
+  }
+  box.innerHTML=html;
+}
+dualCanvases.forEach(cv => cv.addEventListener('click', e => {
+  if (!cv._g) return; const {px,py}=evPos(e,cv); const h=hitTest(cv._g,px,py);
+  st.focus = st.focus===h.k ? null : h.k; schedule();
+}));
+
+// ---------- tab: identities ----------
+const HINT = {
+  d1:`<p>点 <span class="m"><i>p</i></span> ごとに次が同値です。</p>
+      <p style="padding-left:1em"><span class="m"><i>p</i> ∉ ${F('int(A)')}</span> ⟺ どの <span class="m"><i>ε</i> &gt; 0</span> でも <span class="m">U(<i>p</i>; <i>ε</i>) ⊄ <i>A</i></span> ⟺ どの <span class="m"><i>ε</i> &gt; 0</span> でも <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i><sup>c</sup> ≠ ∅</span> ⟺ <span class="m"><i>p</i> ∈ ${F('cl(c(A))')}</span></p>
+      <p>真ん中の同値は「集合 <span class="m">U</span> が <span class="m"><i>A</i></span> に含まれない」と「<span class="m">U</span> が <span class="m"><i>A</i><sup>c</sup></span> と交わる」が同じ主張だ，というだけです。<span class="m"><i>ε</i></span> を固定した段階ですでに成り立つので，左の「ε-球で調べる」の表の 1 行目と 3 行目がつねに逆になっていることで確かめられます。</p>`,
+  d2:`<p><span class="m"><i>p</i> ∉ ${F('cl(A)')}</span> ⟺ ある <span class="m"><i>ε</i></span> で <span class="m">U(<i>p</i>; <i>ε</i>) ∩ <i>A</i> = ∅</span> ⟺ ある <span class="m"><i>ε</i></span> で <span class="m">U(<i>p</i>; <i>ε</i>) ⊂ <i>A</i><sup>c</sup></span> ⟺ <span class="m"><i>p</i> ∈ ${F('int(c(A))')}</span>。</p>
+      <p>(1) を <span class="m"><i>A</i><sup>c</sup></span> に適用して両辺の補集合をとっても得られます。</p>`,
+};
+const IDS = [
+  {g:'いつも成り立つ'},
+  {l:'int(A)', r:'A', rel:'⊂', truth:true, hint:`<p><span class="m"><i>a</i> ∈ ${F('int(A)')}</span> なら <span class="m">U(<i>a</i>; <i>δ</i>) ⊂ <i>A</i></span> で，中心 <span class="m"><i>a</i></span> 自身が <span class="m">U(<i>a</i>; <i>δ</i>)</span> に入るので <span class="m"><i>a</i> ∈ <i>A</i></span>。</p>`},
+  {l:'A', r:'cl(A)', rel:'⊂', truth:true, hint:`<p><span class="m"><i>a</i> ∈ <i>A</i></span> なら，どの <span class="m"><i>ε</i></span> でも <span class="m"><i>a</i> ∈ U(<i>a</i>; <i>ε</i>) ∩ <i>A</i></span>。</p>`},
+  {l:'int(A)', r:'int(B)', rel:'⊂', truth:true, cond:true, hint:`<p>仮定 <span class="m"><i>A</i> ⊂ <i>B</i></span> のもとで，<span class="m">U(<i>a</i>; <i>δ</i>) ⊂ <i>A</i> ⊂ <i>B</i></span>。仮定が成り立たないときは結論も成り立つとは限らないので，左で <span class="m"><i>A</i> ⊂ <i>B</i></span> を崩して比べてみましょう。</p>`},
+  {l:'cl(A)', r:'cl(B)', rel:'⊂', truth:true, cond:true, hint:`<p><span class="m">U(<i>a</i>; <i>ε</i>) ∩ <i>A</i> ⊂ U(<i>a</i>; <i>ε</i>) ∩ <i>B</i></span> から。あるいは閉包と内部の双対性で補集合をとり，内部の場合に帰着できます（<span class="m"><i>B</i><sup>c</sup> ⊂ <i>A</i><sup>c</sup></span>）。</p>`},
+  {l:'int(int(A))', r:'int(A)', rel:'=', truth:true, hint:`<p>⊂ は <span class="m">${F('int(A)')} ⊂ <i>A</i></span> を <span class="m">${F('int(A)')}</span> に適用。⊃：<span class="m">U(<i>a</i>; <i>δ</i>) ⊂ <i>A</i></span> とする。<span class="m"><i>b</i> ∈ U(<i>a</i>; <i>δ</i>)</span> なら <span class="m"><i>r</i> = <i>δ</i> − |<i>b</i> − <i>a</i>| &gt; 0</span> で，三角不等式から <span class="m">U(<i>b</i>; <i>r</i>) ⊂ U(<i>a</i>; <i>δ</i>) ⊂ <i>A</i></span>。よって <span class="m"><i>b</i> ∈ ${F('int(A)')}</span>，すなわち <span class="m">U(<i>a</i>; <i>δ</i>) ⊂ ${F('int(A)')}</span>。要点は「開球は開集合」であることです。</p><p>なお <span class="m"><i>ε</i></span> を固定した「<span class="m"><i>ε</i></span>-内部」は 2 回とると <span class="m">2<i>ε</i></span>-内部になり，冪等ではありません。冪等性は「どれかの <span class="m"><i>δ</i></span>」で定義していることから来ています。</p>`},
+  {l:'cl(cl(A))', r:'cl(A)', rel:'=', truth:true, hint:`<p>閉包と内部の双対性より <span class="m">${F('cl(A)')} = ${F('c(int(c(A)))')}</span>。これと内部の冪等性から <span class="m">${F('cl(cl(A))')} = ${F('c(int(int(c(A))))')} = ${F('c(int(c(A)))')} = ${F('cl(A)')}</span>。</p>`},
+  {l:'int(A∩B)', r:'int(A)∩int(B)', rel:'=', truth:true, hint:`<p>⊂ は単調性から。⊃：<span class="m">U(<i>a</i>; <i>δ</i><sub>1</sub>) ⊂ <i>A</i></span>，<span class="m">U(<i>a</i>; <i>δ</i><sub>2</sub>) ⊂ <i>B</i></span> なら <span class="m"><i>δ</i> = min{<i>δ</i><sub>1</sub>, <i>δ</i><sub>2</sub>}</span> で <span class="m">U(<i>a</i>; <i>δ</i>) ⊂ <i>A</i> ∩ <i>B</i></span>。有限個なので min がとれることが本質で，無限個の共通部分では成り立ちません（例：<span class="m">⋂ U(0; 1/<i>k</i>) = {0}</span>）。</p>`},
+  {l:'cl(A∪B)', r:'cl(A)∪cl(B)', rel:'=', truth:true, hint:`<p>閉包と内部の双対性で両辺の補集合をとると，<span class="m">${F('int(c(A)∩c(B))')} = ${F('int(c(A))∩int(c(B))')}</span> に帰着します。</p>`},
+  {g:'一般には成り立たない'},
+  {l:'int(A∪B)', r:'int(A)∪int(B)', rel:'=', truth:false, hint:`<p>⊃ はつねに成り立ちます（単調性）。崩れるのは <span class="m"><i>A</i></span> と <span class="m"><i>B</i></span> の継ぎ目です。例「閉じた左側 A と開いた右側 B」を読み込んでみましょう。</p>`},
+  {l:'cl(A∩B)', r:'cl(A)∩cl(B)', rel:'=', truth:false, hint:`<p>⊂ はつねに成り立ちます。隣り合う 2 つの開集合では <span class="m"><i>A</i> ∩ <i>B</i> = ∅</span> なのに，閉包どうしは継ぎ目で交わります。</p>`},
+  {l:'int(cl(A))', r:'int(A)', rel:'=', truth:false, hint:`<p>開正方形に穴（点）やスリット（辺）をあけると，閉包をとった時点で穴がふさがります。</p>`},
+  {g:'境界'},
+  {l:'bd(A)', r:'cl(A)∖A', rel:'=', truth:'open', hint:`<p><span class="m"><i>A</i></span> が開集合なら <span class="m">${F('int(A)')} = <i>A</i></span> なので，閉包と内部の双対性から <span class="m">∂<i>A</i> = ${F('cl(A)')} ∩ ${F('cl(c(A))')} = ${F('cl(A)')} ∩ ${F('c(int(A))')} = ${F('cl(A)∖A')}</span>。一般には，この式と下の式がどちらも崩れる <span class="m"><i>A</i></span> もあります。例「辺の一部だけ含む長方形」で両方を見比べてみましょう。</p>`},
+  {l:'bd(A)', r:'A∖int(A)', rel:'=', truth:'closed', hint:`<p><span class="m"><i>A</i></span> が閉集合なら <span class="m">${F('cl(A)')} = <i>A</i></span> なので <span class="m">∂<i>A</i> = <i>A</i> ∩ ${F('cl(c(A))')} = <i>A</i> ∩ ${F('c(int(A))')} = ${F('A∖int(A)')}</span>。</p>`},
+  {g:'発展'},
+  {l:'int(cl(int(cl(A))))', r:'int(cl(A))', rel:'=', truth:true, hint:`<p>閉包を <span class="m"><i>k</i></span>，内部を <span class="m"><i>i</i></span> と書くと <span class="m"><i>kik</i> ⊂ <i>k</i></span>（<span class="m"><i>ik</i> ⊂ <i>k</i></span> に <span class="m"><i>k</i></span> を施す）から <span class="m"><i>ikik</i> ⊂ <i>ik</i></span>。逆に <span class="m"><i>ik</i></span> は開集合で <span class="m"><i>ik</i> ⊂ <i>kik</i></span> だから，内部の最大性（<span class="m">${F('int(A)')}</span> は <span class="m"><i>A</i></span> に含まれる最大の開集合）より <span class="m"><i>ik</i> ⊂ <i>ikik</i></span>。クラトフスキーの 14 集合定理の鍵になる等式です。</p>`},
+];
+function verdictText(Lset,Rset,rel,diff){
+  if (rel==='='){
+    if (!Top.count(diff)) return {ok:true, html:'両辺は一致しています。'};
+  } else {
+    if (!Top.count(diff)) return {ok:true, html:'左辺 ⊂ 右辺 が成り立っています。'};
+  }
+  const cnt=[0,0,0]; for (let k=0;k<T;k++) if (diff[k]) cnt[dimOf(k)]++;
+  const parts=[]; if (cnt[0]) parts.push(`頂点 ${cnt[0]}`); if (cnt[1]) parts.push(`辺 ${cnt[1]}`); if (cnt[2]) parts.push(`正方形・外側 ${cnt[2]}`);
+  return {ok:false, html: (rel==='=' ? '赤で示したセルで両辺が違います' : '左辺にあって右辺にないセルを赤で示しています') + `（${parts.join('，')}）。`};
+}
+function drawCompare(cvL,cvR,Lset,Rset,rel){
+  const diff = rel==='=' ? Top.xor(Lset,Rset) : Top.minus(Lset,Rset);
+  const dl=[]; for (let k=0;k<T;k++) if (diff[k]) dl.push(k);
+  [[cvL,Lset],[cvR,Rset]].forEach(([cv,S],i) => {
+    const {ctx,g}=setup(cv); drawBase(ctx,g); drawSet(ctx,g,S,PAL.a);
+    if (rel==='=' || i===0) drawCells(ctx,g,dl,PAL.bad,{lw:2,fill:0.16});
+  });
+  return diff;
+}
+function buildIdList(){
+  const box=$('idlist'); box.innerHTML='';
+  IDS.forEach((it,idx) => {
+    if (it.g){ const d=document.createElement('div'); d.className='idgrp'; d.textContent=it.g; box.appendChild(d); return; }
+    const b=document.createElement('button'); b.className='idrow'; b.type='button';
+    b.setAttribute('aria-pressed', String(idx===st.idIdx));
+    const tag = it.truth===true ? '<span class="tag">つねに成立</span>' : it.truth===false ? '<span class="tag f">一般には不成立</span>' : `<span class="tag">${it.truth==='open'?'開集合なら成立':'閉集合なら成立'}</span>`;
+    b.innerHTML=`<span><span class="small">${it.ref||''}</span> <span class="m">${F(it.l)} ${it.rel} ${F(it.r)}</span></span>${tag}`;
+    b.addEventListener('click', () => { st.idIdx=idx; [...box.querySelectorAll('.idrow')].forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); schedule(); });
+    box.appendChild(b);
+  });
+  const sel=box.querySelector('[aria-pressed="true"]');
+  if (sel) box.scrollTop=Math.max(0, sel.offsetTop-40);
+}
+function renderIds(){
+  const it=IDS[st.idIdx], env={A:st.A,B:st.B};
+  const L=evalE(parse(it.l),env), R=evalE(parse(it.r),env);
+  $('idFormula').innerHTML=`${F(it.l)} ${it.rel} ${F(it.r)}`;
+  $('idLcap').innerHTML=`左辺　${FM(it.l)}`; $('idRcap').innerHTML=`右辺　${FM(it.r)}`;
+  const diff=drawCompare($('idL'),$('idR'),L,R,it.rel), v=verdictText(L,R,it.rel,diff);
+  let extra='';
+  if (it.cond){ const sub=Top.sub(st.A,st.B); extra = sub ? ' いまは仮定 <span class="m"><i>A</i> ⊂ <i>B</i></span> が成り立っています。' : ' いまは仮定 <span class="m"><i>A</i> ⊂ <i>B</i></span> が成り立っていません。'; }
+  if (it.truth===false) extra += v.ok ? ' この <span class="m"><i>A</i></span>, <span class="m"><i>B</i></span> では成り立ってしまいます。成り立たない例を描いてみましょう。' : ' 反例になっています。';
+  if (it.truth==='open') extra += ` <span class="m"><i>A</i></span> は開集合${Top.eq(st.A,Top.int(st.A))?'です':'ではありません'}。`;
+  if (it.truth==='closed') extra += ` <span class="m"><i>A</i></span> は閉集合${Top.eq(st.A,Top.cl(st.A))?'です':'ではありません'}。`;
+  const el=$('idVerdict'); el.className='verdict '+(v.ok?'ok':'ng'); el.innerHTML=v.html+extra;
+  $('idHint').innerHTML=it.hint;
+}
+
+// ---------- tab: expressions ----------
+let exLastL=null;
+function renderExpr(){
+  const env={A:st.A,B:st.B}, rel=$('rel').value;
+  let Ln,Rn;
+  try { Ln=parse($('lhs').value); } catch(e){ $('exprErr').textContent='左辺：'+e.message; return; }
+  try { Rn=parse($('rhs').value); } catch(e){ $('exprErr').textContent='右辺：'+e.message; return; }
+  $('exprErr').textContent='';
+  const L=evalE(Ln,env), R=evalE(Rn,env); exLastL=L;
+  $('exFormula').innerHTML=`${pretty(Ln)} ${rel} ${pretty(Rn)}`;
+  $('exLcap').innerHTML=`左辺　<span class="m">${pretty(Ln)}</span>`; $('exRcap').innerHTML=`右辺　<span class="m">${pretty(Rn)}</span>`;
+  const diff=drawCompare($('exL'),$('exR'),L,R,rel), v=verdictText(L,R,rel,diff);
+  const el=$('exVerdict'); el.className='verdict '+(v.ok?'ok':'ng'); el.innerHTML=v.html;
+}
+['lhs','rhs','rel'].forEach(id => $(id).addEventListener('input', schedule));
+$('exToA').addEventListener('click', () => { if (exLastL){ st.A=exLastL.slice(); st.layer='A'; syncSeg(); onSetsChanged(true); } });
+
+// ---------- tab: Kuratowski ----------
+function renderKur(){
+  const orb=kuratowski(st.A), box=$('kurThumbs');
+  $('kurCount').className='verdict '+(orb.length>=10?'ok':'');
+  $('kurCount').innerHTML=`異なる集合は ${orb.length} 個。${orb.length>=10?'この世界での最大値に達しています。':'最大 10 個まで増やせます。挑戦してみましょう。'}`;
+  box.innerHTML='';
+  orb.forEach(o => {
+    const f=document.createElement('figure'); const cv=document.createElement('canvas'); cv.className='mini'; cv.style.cursor='default';
+    const cap=document.createElement('figcaption'); cap.innerHTML=`<span class="m">${pretty(o.expr)}</span>`;
+    f.appendChild(cv); f.appendChild(cap); box.appendChild(f); o.cv=cv;
+  });
+  orb.forEach(o => { const {ctx,g}=setup(o.cv); drawBase(ctx,g); drawSet(ctx,g,o.set,PAL.a); });
+  $('kurHint').innerHTML=`<p>一般の位相空間では，閉包と補集合から得られる集合は最大 14 個で，<span class="m">ℝ</span> でも 14 個が実現できます（Kuratowski, 1922）。実現例には <span class="m">ℚ</span> のような「稠密だが内部が空」の部分が必要です。</p>
+  <p>このセルの世界では，閉包を <span class="m"><i>k</i></span>，内部を <span class="m"><i>i</i></span> と書くと <span class="m"><i>kik</i>(<i>A</i>) = <i>ki</i>(<i>A</i>)</span> がつねに成り立つので，種類が減って最大 10 個になります。</p>
+  <p>証明：⊃ は <span class="m"><i>i</i>(<i>A</i>) ⊂ <i>ik</i>(<i>A</i>)</span> に <span class="m"><i>k</i></span> を施せば得られます。⊂：<span class="m"><i>σ</i> ∈ <i>kik</i>(<i>A</i>)</span> なら，<span class="m"><i>σ</i></span> はある <span class="m"><i>τ</i> ∈ <i>ik</i>(<i>A</i>)</span> の閉包に含まれます。<span class="m"><i>τ</i></span> の星から正方形（または外側）<span class="m"><i>ρ</i></span> を 1 つとると，<span class="m"><i>ρ</i> ∈ <i>k</i>(<i>A</i>)</span>。正方形の星は自分自身だけなので <span class="m"><i>ρ</i> ∈ <i>A</i></span>，さらに <span class="m"><i>ρ</i> ∈ <i>i</i>(<i>A</i>)</span>。<span class="m"><i>σ</i></span> は <span class="m"><i>ρ</i></span> の閉包に含まれるので <span class="m"><i>σ</i> ∈ <i>ki</i>(<i>A</i>)</span>。</p>`;
+}
+
+// ---------- controls ----------
+function syncSeg(){
+  document.querySelectorAll('#layerSeg button').forEach(b=>b.setAttribute('aria-checked', String(b.dataset.layer===st.layer)));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-checked', String(b.dataset.mode===st.mode)));
+  document.querySelectorAll('#dualSeg button').forEach(b=>b.setAttribute('aria-checked', String(+b.dataset.dual===st.dual)));
+  $('paintOpts').classList.toggle('hide', st.mode!=='paint');
+  $('probeOpts').classList.toggle('hide', st.mode!=='probe');
+  $('bandNote').hidden=!st.band;
+}
+document.querySelectorAll('#layerSeg button').forEach(b=>b.addEventListener('click',()=>{ st.layer=b.dataset.layer; syncSeg(); schedule(); }));
+document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('click',()=>{ st.mode=b.dataset.mode; st.hover=null; syncSeg(); schedule(); }));
+document.querySelectorAll('#dualSeg button').forEach(b=>b.addEventListener('click',()=>{ st.dual=+b.dataset.dual; syncSeg(); schedule(); }));
+function showTab(t){
+  st.tab=t;
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.tab===t)));
+  ['dual','ids','expr','kur'].forEach(n=>$('tab-'+n).classList.toggle('hide', n!==t));
+  schedule();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function setMode(m){ st.mode=m; st.hover=null; syncSeg(); schedule(); }
+function setBrush(v){ st.brush=v; $('brush').value=v; }
+function setBand(on){ st.band=on; $('showBand').checked=on; syncSeg(); schedule(); }
+function setEpsSlider(v){ $('eps').value=v; st.eps=epsFromSlider(v); $('epsVal').textContent=st.eps.toFixed(3); schedule(); }
+$('brush').addEventListener('change', e=>{ st.brush=e.target.value; });
+$('showOther').addEventListener('change', e=>{ st.showOther=e.target.checked; schedule(); });
+$('eps').addEventListener('input', e=>{ st.eps=epsFromSlider(+e.target.value); $('epsVal').textContent=st.eps.toFixed(3); schedule(); });
+$('showMet').addEventListener('change', e=>{ st.met=e.target.checked; schedule(); });
+$('showBand').addEventListener('change', e=>{ st.band=e.target.checked; syncSeg(); schedule(); });
+$('bComp').addEventListener('click', ()=>{ st[st.layer]=Top.comp(actSet()); onSetsChanged(true); });
+$('bClear').addEventListener('click', ()=>{ st[st.layer]=Top.empty(); onSetsChanged(true); });
+$('bSwap').addEventListener('click', ()=>{ const t=st.A; st.A=st.B; st.B=t; onSetsChanged(true); });
+const PRESETS = {
+  open:   () => ({A:rect(2,1,6,5,false)}),
+  closed: () => ({A:rect(2,1,6,5,true)}),
+  half:   () => ({A:halfOpen(2,1,6,5)}),
+  holes:  () => { const A=rect(1,1,7,5,true); A[vid(3,3)]=0; A[eid(5,2)]=0; A[eid(5,3)]=0; A[vid(5,3)]=0; return {A}; },
+  curve:  () => { const A=Top.empty(); [hid(1,2),vid(2,2),hid(2,2),vid(3,2),eid(3,2),vid(3,3),hid(3,3),vid(4,3),eid(4,3),vid(4,4),hid(4,4),vid(5,4)].forEach(k=>A[k]=1); A[vid(6,1)]=1; A[vid(7,4)]=1; return {A}; },
+  pairInt:() => ({A:rect(1,1,4,5,true), B:rect(4,1,7,5,false)}),
+  pairCl: () => ({A:rect(1,1,4,5,false), B:rect(4,1,7,5,false)}),
+  nested: () => ({A:rect(3,2,5,4,false), B:rect(2,1,7,5,true)}),
+};
+function loadPreset(name){
+  const p=PRESETS[name]; if (!p) return; const r=p();
+  if (r.A) st.A=r.A; if (r.B) st.B=r.B; if (!r.B) st.layer='A';
+  st.focus=null; tour.presets.add(name); syncSeg(); onSetsChanged();
+}
+$('preset').addEventListener('change', e=>{ const v=e.target.value; e.target.value=''; loadPreset(v); });
+// sharing
+function updateCode(){ $('code').value=encodeState(st.A,st.B); }
+$('copyCode').addEventListener('click', async ()=>{
+  const v=$('code').value; let ok=false;
+  try { await navigator.clipboard.writeText(v); ok=true; } catch(e){ $('code').select(); try { ok=document.execCommand('copy'); } catch(_){} }
+  $('codeMsg').textContent = ok ? 'コピーしました。' : 'コピーできませんでした。欄を選択して手動でコピーしてください。';
+});
+$('loadBtn').addEventListener('click', ()=>{
+  const r=decodeState($('loadCode').value);
+  if (!r){ $('codeMsg').textContent='コードを読み取れませんでした。「s1」で始まるコード全体を貼り付けてください。'; return; }
+  st.A=r.A; st.B=r.B; st.focus=null; $('codeMsg').textContent='読み込みました。'; onSetsChanged();
+});
+
+function onSetsChanged(manual){ st.edits++; st.manual=!!manual; updateCode(); schedule(); }
+let raf=0;
+function schedule(){ if (!raf) raf=requestAnimationFrame(()=>{ raf=0; renderAll(); }); }
+function renderAll(){
+  if (st.view==='ex') renderEx();
+  else {
+    renderEditor();
+    if (st.tab==='dual') renderDual();
+    else if (st.tab==='ids') renderIds();
+    else if (st.tab==='expr') renderExpr();
+    else renderKur();
+    evalChallenges();
+  }
+  if (tour.on) tourUpdate(false);
+}
+
+// ================= 具体例ビュー =================
+const TAU=2*Math.PI;
+const reduceMotionEarly = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MM = h => `<span class="m">${h}</span>`;
+const X2Y2 = '<i>x</i><sup>2</sup> + <i>y</i><sup>2</sup>';
+const SETB = c => `{ (<i>x</i>, <i>y</i>) ∈ ℝ<sup>2</sup> | ${c} }`;
+const AA = MM('<i>A</i>');
+const diskPath = r => (ctx,V) => { ctx.moveTo(V.X(r),V.Y(0)); ctx.arc(V.X(0),V.Y(0),r*V.s,0,TAU); };
+function boxSd(x,y,hx,hy){ const qx=Math.abs(x)-hx, qy=Math.abs(y)-hy; return Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0); }
+const PT = (x,y,inA,name) => ({t:'pt',x,y,inA,name});
+const SG = (ax,ay,bx,by,inA,name) => ({t:'seg',ax,ay,bx,by,inA,name});
+const ARC = (r,a0,a1,inA,name) => ({t:'arc',cx:0,cy:0,r,a0,a1,inA,name});
+const OPEN_DISK = MM(SETB(`${X2Y2} &lt; 1`)), CLOSED_DISK = MM(SETB(`${X2Y2} ≤ 1`)), CIRCLE = MM(SETB(`${X2Y2} = 1`));
+const EXAMPLES = [
+  { id:'odisk', name:'開円板', tag:'', set:SETB(`${X2Y2} &lt; 1`),
+    R:{sd:(x,y)=>Math.hypot(x,y)-1, path:diskPath(1)}, pieces:[ARC(1,0,TAU,false,'円周')],
+    pts:[[0.6,0.5],[0,0],[1,0],[1.5,0.8]],
+    kind:'開集合で，閉集合ではない',
+    why:`点 ${MM('<i>p</i> ∈ <i>A</i>')} に対して ${MM('<i>r</i> = 1 − |<i>p</i>|')} とおくと，三角不等式から ${MM('U(<i>p</i>; <i>r</i>) ⊂ <i>A</i>')}。よってすべての点が内点で，${AA} は開集合です。一方，円周上の点 ${MM('(1, 0)')} はどの球も ${AA} と交わる（触点）のに ${AA} に属さないので，閉集合ではありません。`,
+    int:`${AA} 自身`, cl:`閉円板 ${CLOSED_DISK}`, bd:`円周 ${CIRCLE}` },
+  { id:'cdisk', name:'閉円板', tag:'', set:SETB(`${X2Y2} ≤ 1`),
+    R:{sd:(x,y)=>Math.hypot(x,y)-1, path:diskPath(1)}, pieces:[ARC(1,0,TAU,true,'円周')],
+    pts:[[0.6,0.5],[0,1],[0,0],[1.3,-0.9]],
+    kind:'閉集合で，開集合ではない',
+    why:`補集合 ${MM(SETB(`${X2Y2} &gt; 1`))} は，各点 ${MM('<i>q</i>')} で ${MM('<i>r</i> = |<i>q</i>| − 1')} とすると ${MM('U(<i>q</i>; <i>r</i>)')} が補集合に入るので開集合です。よって ${AA} は閉集合です。円周上の点は ${AA} に属しますが，どんな球も ${AA} の外にはみ出すので内点ではなく，${AA} は開集合ではありません。`,
+    int:`開円板 ${OPEN_DISK}`, cl:`${AA} 自身`, bd:`円周 ${CIRCLE}` },
+  { id:'hdisk', name:'境界を半分だけ含む円板', tag:'', set:`${SETB(`${X2Y2} &lt; 1`)} ∪ ${SETB(`${X2Y2} = 1, <i>y</i> &gt; 0`)}`,
+    R:{sd:(x,y)=>Math.hypot(x,y)-1, path:diskPath(1)},
+    pieces:[ARC(1,0,Math.PI,true,'上半分の円周'), ARC(1,Math.PI,TAU,false,'下半分の円周'), PT(1,0,false,'点 (1, 0)'), PT(-1,0,false,'点 (−1, 0)')],
+    pts:[[0,1],[0,-1],[1,0],[0,0.3]],
+    kind:'開集合でも閉集合でもない',
+    why:`上半分の円周の点（例えば ${MM('(0, 1)')}）は ${AA} に属しますが内点ではないので，${AA} は開集合ではありません。下半分の円周の点（例えば ${MM('(0, −1)')}）は触点なのに ${AA} に属さないので，閉集合でもありません。`,
+    int:`開円板 ${OPEN_DISK}`, cl:`閉円板 ${CLOSED_DISK}`, bd:`円周 ${CIRCLE}` },
+  { id:'pdisk', name:'中心を除いた閉円板', tag:'', set:SETB(`0 &lt; ${X2Y2} ≤ 1`),
+    R:{sd:(x,y)=>{ const r=Math.hypot(x,y); return Math.max(r-1,-r); }, sdc:(x,y)=>Math.hypot(x,y)-1, path:diskPath(1)},
+    pieces:[ARC(1,0,TAU,true,'円周'), PT(0,0,false,'原点')],
+    pts:[[0,0],[0.15,0.1],[1,0],[0.5,-0.4]],
+    kind:'開集合でも閉集合でもない',
+    why:`円周上の点は ${AA} に属しますが内点ではないので，${AA} は開集合ではありません。原点は ${AA} に属しませんが，どんな ${MM('U(0; <i>ε</i>)')} も ${AA} と交わる（触点）ので，閉集合でもありません。閉集合 ${MM('<i>F</i><sub><i>k</i></sub>')} = ${MM(SETB(`1/<i>k</i><sup>2</sup> ≤ ${X2Y2} ≤ 1`))}（${MM('<i>k</i> = 1, 2, …')}）の和集合がちょうどこの集合で，「閉集合の無限個の和集合は閉集合とは限らない」例になっています。`,
+    int:MM(SETB(`0 &lt; ${X2Y2} &lt; 1`)), cl:`閉円板 ${CLOSED_DISK}`, bd:`円周 ∪ ${MM('{(0, 0)}')}` },
+  { id:'circle', name:'円周', tag:'', set:SETB(`${X2Y2} = 1`),
+    R:null, pieces:[ARC(1,0,TAU,true,'円周')],
+    pts:[[1,0],[0.6,0.8],[0,0],[1.2,0]],
+    kind:'閉集合で，開集合ではない',
+    why:`補集合の点 ${MM('<i>q</i>')} では ${MM('<i>r</i> = |1 − |<i>q</i>||')} とすると ${MM('U(<i>q</i>; <i>r</i>)')} が補集合に入るので，${AA} は閉集合です。円周の点を中心とする球は必ず円周の外の点を含むので，内点は 1 つもありません。`,
+    int:MM('∅'), cl:`${AA} 自身`, bd:`${AA} 自身` },
+  { id:'diskpt', name:'開円板と 1 点', tag:'', set:`${SETB(`${X2Y2} &lt; 1`)} ∪ {(1.6, 0)}`,
+    R:{sd:(x,y)=>Math.hypot(x,y)-1, path:diskPath(1)}, pieces:[ARC(1,0,TAU,false,'円周'), PT(1.6,0,true,'点 (1.6, 0)')],
+    pts:[[1.6,0],[1.6,0.15],[1,0],[0,0]],
+    kind:'開集合でも閉集合でもない',
+    why:`点 ${MM('(1.6, 0)')} は ${AA} に属しますが，まわりの小さい球には ${AA} の外の点しかないので内点ではありません（孤立点）。よって開集合ではありません。円周上の点は触点なのに ${AA} に属さないので，閉集合でもありません。孤立点は境界点になることにも注目しましょう。`,
+    int:`開円板 ${OPEN_DISK}`, cl:`閉円板 ∪ ${MM('{(1.6, 0)}')}`, bd:`円周 ∪ ${MM('{(1.6, 0)}')}` },
+  { id:'uhalf', name:'上半平面', tag:'', set:SETB('<i>y</i> &gt; 0'),
+    R:{sd:(x,y)=>-y, path:(ctx,V)=>{ const yy=V.Y(0); if (yy>0) ctx.rect(0,0,V.w,Math.min(yy,V.h)); }},
+    pieces:[SG(-1000,0,1000,0,false,'x 軸')],
+    pts:[[0,1],[0.5,0.05],[1,0],[-1,-1]],
+    kind:'開集合で，閉集合ではない',
+    why:`点 ${MM('<i>p</i> = (<i>a</i>, <i>b</i>)')}（${MM('<i>b</i> &gt; 0')}）では ${MM('<i>r</i> = <i>b</i>')} とすると ${MM('U(<i>p</i>; <i>r</i>) ⊂ <i>A</i>')}。x 軸上の点は触点ですが ${AA} に属さないので，閉集合ではありません。`,
+    int:`${AA} 自身`, cl:MM(SETB('<i>y</i> ≥ 0')), bd:`x 軸 ${MM(SETB('<i>y</i> = 0'))}` },
+  { id:'box', name:'半開の正方形', tag:'', set:'(−1, 1) × [−1, 1]',
+    R:{sd:(x,y)=>boxSd(x,y,1,1), path:(ctx,V)=>ctx.rect(V.X(-1),V.Y(1),2*V.s,2*V.s)},
+    pieces:[SG(-1,1,1,1,true,'上の辺'), SG(-1,-1,1,-1,true,'下の辺'), SG(-1,-1,-1,1,false,'左の辺'), SG(1,-1,1,1,false,'右の辺'),
+            PT(1,1,false,'角'), PT(-1,1,false,'角'), PT(1,-1,false,'角'), PT(-1,-1,false,'角')],
+    pts:[[0,1],[1,0],[1,1],[0.4,0.3]],
+    kind:'開集合でも閉集合でもない',
+    why:`上下の辺の点（例えば ${MM('(0, 1)')}）は ${AA} に属しますが内点ではないので，開集合ではありません。左右の辺の点（例えば ${MM('(1, 0)')}）は触点なのに ${AA} に属さないので，閉集合でもありません。`,
+    int:MM('(−1, 1) × (−1, 1)'), cl:MM('[−1, 1] × [−1, 1]'), bd:'正方形の周' },
+  { id:'seg', name:'線分', tag:'', set:'{ (<i>x</i>, 0) ∈ ℝ<sup>2</sup> | |<i>x</i>| ≤ 1 }',
+    R:null, pieces:[SG(-1,0,1,0,true,'線分'), PT(-1,0,true,'端点'), PT(1,0,true,'端点')],
+    pts:[[0,0],[1,0],[1.3,0],[0,0.4]],
+    kind:'閉集合で，開集合ではない',
+    why:`線分上の点を中心とする球は ${MM('<i>y</i> ≠ 0')} の点を含むので，内点は 1 つもありません。${AA} の外の点 ${MM('<i>q</i>')} では，線分までの距離 ${MM('<i>r</i> &gt; 0')} をとれば ${MM('U(<i>q</i>; <i>r</i>) ∩ <i>A</i> = ∅')} なので補集合は開集合，よって ${AA} は閉集合です。`,
+    int:MM('∅'), cl:`${AA} 自身`, bd:`${AA} 自身` },
+  { id:'finite', name:'有限集合', tag:'', set:'{ (0, 0), (1, 1/2), (−6/5, −4/5) }',
+    R:null, pieces:[PT(0,0,true,'点 (0, 0)'), PT(1,0.5,true,'点 (1, 1/2)'), PT(-1.2,-0.8,true,'点 (−6/5, −4/5)')],
+    pts:[[0,0],[1,0.5],[0.3,0.2]],
+    kind:'閉集合で，開集合ではない',
+    why:`各点を中心とする球は ${AA} の外の点を含むので，内点はありません。${AA} の外の点 ${MM('<i>q</i>')} では，${AA} の各点までの距離の最小値 ${MM('<i>r</i> &gt; 0')} をとれば ${MM('U(<i>q</i>; <i>r</i>) ∩ <i>A</i> = ∅')}。よって閉集合です。`,
+    int:MM('∅'), cl:`${AA} 自身`, bd:`${AA} 自身` },
+  { id:'graph', name:'連続関数のグラフ', tag:'', set:'{ (<i>x</i>, <i>x</i><sup>2</sup>) | 0 ≤ <i>x</i> ≤ 1 }',
+    R:null, pieces:[{t:'graph', f:x=>x*x, x0:0, x1:1, inA:true, name:'グラフ'}, PT(0,0,true,'端点'), PT(1,1,true,'端点')],
+    pts:[[0.5,0.25],[1,1],[0.5,0.4]],
+    kind:'閉集合で，開集合ではない',
+    why:`${AA} の点列 ${MM('(<i>x</i><sub><i>n</i></sub>, <i>f</i>(<i>x</i><sub><i>n</i></sub>))')} が ${MM('(<i>a</i>, <i>b</i>)')} に収束すると，${MM('<i>x</i><sub><i>n</i></sub> → <i>a</i> ∈ [0, 1]')} で，${MM('<i>f</i>')} の連続性から ${MM('<i>f</i>(<i>x</i><sub><i>n</i></sub>) → <i>f</i>(<i>a</i>)')}。よって ${MM('<i>b</i> = <i>f</i>(<i>a</i>)')} で ${MM('(<i>a</i>, <i>b</i>) ∈ <i>A</i>')}，つまり ${AA} は閉集合です。グラフの点を中心とする球はグラフの外の点を含むので，内点はありません。`,
+    int:MM('∅'), cl:`${AA} 自身`, bd:`${AA} 自身` },
+  { id:'sin', name:'位相幾何学者の正弦曲線', tag:'', set:'{ (<i>x</i>, sin(1/<i>x</i>)) | 0 &lt; <i>x</i> ≤ 1 } ∪ {(0, 0)}',
+    R:null,
+    pieces:[{t:'sin', inA:true, name:'曲線'}, SG(0,-1,0,0,false,'y 軸上の線分'), SG(0,0,0,1,false,'y 軸上の線分'),
+            PT(0,0,true,'原点'), PT(0,1,false,'点 (0, 1)'), PT(0,-1,false,'点 (0, −1)'), PT(1,Math.sin(1),true,'曲線の端点')],
+    pts:[[0,0.5],[0,0],[0.1,0],[1/(2.5*Math.PI),1,'(2/(5π), 1)']],
+    witnessIn:(p,eps)=>{ if (p.x!==0 || Math.abs(p.y)>1) return null; const a=Math.asin(p.y); const n=Math.max(1,Math.ceil((2/eps-a)/TAU)); const x=1/(a+TAU*n);
+      return {x, y:p.y, note:`${MM('<i>x</i>')} は曲線上の点 ${MM('(<i>t</i>, sin(1/<i>t</i>))')} で，${MM('<i>t</i> = 1/(arcsin('+fmtDec(p.y)+') + 2π·'+n+')')} とすると ${MM('sin(1/<i>t</i>) = '+fmtDec(p.y))} です。${MM('<i>n</i>')} を大きくすれば ${MM('<i>t</i>')} はいくらでも 0 に近くとれます。`}; },
+    hint:'原点のまわりを「拡大」すると，曲線が y 軸の線分に限りなく近づく様子が見えます。',
+    kind:'開集合でも閉集合でもない',
+    why:`原点は ${AA} に属しますが内点ではないので，開集合ではありません。${MM('(0, 1/2)')} は ${AA} に属しませんが，${MM('sin(1/<i>x</i>) = 1/2')} となる ${MM('<i>x</i>')} はいくらでも 0 に近くとれるので，どんな球も ${AA} と交わります（触点）。よって閉集合でもありません。`,
+    int:MM('∅'), cl:MM('<i>A</i> ∪ ({0} × [−1, 1])'), bd:`閉包と同じ ${MM('<i>A</i> ∪ ({0} × [−1, 1])')}` },
+  { id:'q2', name:'ℚ × ℚ（有理点全体）', tag:'', set:'ℚ × ℚ = { (<i>x</i>, <i>y</i>) | <i>x</i>, <i>y</i> ∈ ℚ }', q2:true,
+    R:null, pieces:[], pts:[[0,0],[0.5,0.25],[Math.SQRT2/2,1/3,'(√2/2, 1/3)']],
+    kind:'開集合でも閉集合でもない',
+    why:`有理数も無理数も数直線上で稠密なので，どんな球 ${MM('U(<i>p</i>; <i>ε</i>)')} にも，座標がともに有理数の点とそうでない点の両方が含まれます。よって内点も外点もなく，すべての点が境界点です。原点のような ${AA} の点は内点ではないので開集合ではなく，無理数を含む点は触点なのに ${AA} に属さないので閉集合でもありません。`,
+    note:'画面上の座標はすべて有限小数なので，このツールでは図に描かれた格子点に吸着した点を有理点，それ以外の点を座標に無理数を含む点とみなします。拡大すると格子は細かくなります。',
+    int:MM('∅'), cl:MM('ℝ<sup>2</sup>'), bd:MM('ℝ<sup>2</sup>') },
+];
+// ---- distances to pieces ----
+function closestGraph(pc,x,y){
+  const N=400, h=(pc.x1-pc.x0)/N; let bu=pc.x0, bd=Infinity;
+  for (let i=0;i<=N;i++){ const u=pc.x0+h*i, d=Math.hypot(u-x,pc.f(u)-y); if (d<bd){ bd=d; bu=u; } }
+  let lo=Math.max(pc.x0,bu-h), hi=Math.min(pc.x1,bu+h);
+  for (let k=0;k<60;k++){ const m1=lo+(hi-lo)/3, m2=hi-(hi-lo)/3; if (Math.hypot(m1-x,pc.f(m1)-y) < Math.hypot(m2-x,pc.f(m2)-y)) hi=m2; else lo=m1; }
+  const u=(lo+hi)/2, d=Math.hypot(u-x,pc.f(u)-y);
+  return d<bd ? {x:u,y:pc.f(u),d} : {x:bu,y:pc.f(bu),d:bd};
+}
+function closestSin(x,y){
+  const g = t => Math.hypot(1/t-x, Math.sin(t)-y);   // t = 1/u, u in (0,1]
+  let bt=1, bd=g(1), bdt=0.05;
+  const scan=(t0,t1,dt)=>{ for (let t=t0;t<=t1;t+=dt){ const d=g(t); if (d<bd){ bd=d; bt=t; bdt=dt; } } };
+  scan(1,200,0.05);
+  const ulo=Math.max(1e-5,x-bd), uhi=Math.min(1,x+bd);
+  if (uhi>ulo){ const t0=1/uhi, t1=1/ulo; let dt=0.05; if ((t1-t0)/dt>3e5) dt=(t1-t0)/3e5; scan(t0,t1,dt); }
+  let lo=Math.max(1,bt-bdt), hi=bt+bdt;
+  for (let k=0;k<60;k++){ const m1=lo+(hi-lo)/3, m2=hi-(hi-lo)/3; if (g(m1)<g(m2)) hi=m2; else lo=m1; }
+  const t=(lo+hi)/2; if (g(t)<bd){ bd=g(t); bt=t; }
+  return {x:1/bt, y:Math.sin(bt), d:bd};
+}
+function closestPiece(pc,x,y,open){
+  if (pc.t==='pt') return {x:pc.x, y:pc.y, d:Math.hypot(x-pc.x,y-pc.y)};
+  if (pc.t==='seg'){
+    const dx=pc.bx-pc.ax, dy=pc.by-pc.ay, L2=dx*dx+dy*dy, m=open?1e-6:0;
+    const t=Math.min(1-m,Math.max(m,((x-pc.ax)*dx+(y-pc.ay)*dy)/L2));
+    const qx=pc.ax+t*dx, qy=pc.ay+t*dy; return {x:qx, y:qy, d:Math.hypot(x-qx,y-qy)};
+  }
+  if (pc.t==='arc'){
+    const full = pc.a1-pc.a0 >= TAU-1e-12;
+    let th=Math.atan2(y-pc.cy,x-pc.cx); if (th<0) th+=TAU;
+    if (!full && !(th>pc.a0 && th<pc.a1)){
+      const d0=Math.hypot(x-pc.cx-pc.r*Math.cos(pc.a0), y-pc.cy-pc.r*Math.sin(pc.a0));
+      const d1=Math.hypot(x-pc.cx-pc.r*Math.cos(pc.a1), y-pc.cy-pc.r*Math.sin(pc.a1));
+      th = d0<=d1 ? pc.a0+(open?1e-6:0) : pc.a1-(open?1e-6:0);
+    }
+    const qx=pc.cx+pc.r*Math.cos(th), qy=pc.cy+pc.r*Math.sin(th);
+    return {x:qx, y:qy, d:Math.hypot(x-qx,y-qy)};
+  }
+  if (pc.t==='graph') return closestGraph(pc,x,y);
+  return closestSin(x,y);
+}
+// ---- state ----
+const exs = { cur:0, view:'A', p:{x:0.6,y:0.5,on:null,dmin:0}, eps:0.17, zoom:1, cx:0, cy:0,
+  quiz:false, answered:false, guess:null, score:{ok:0,n:0}, lastCls:null, lastStat:'', nbhd:'none' };
+let EXV=null, exDrag=false;
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+function fmtFrac(num,den){ const g=gcd(Math.abs(num),den)||1; num/=g; den/=g; const s=den===1?String(Math.abs(num)):`${Math.abs(num)}/${den}`; return (num<0?'−':'')+s; }
+function fmtNum(v){
+  if (Math.abs(v)<1e-12) return '0';
+  const q=v*4; if (Math.abs(q-Math.round(q))<1e-9) return fmtFrac(Math.round(q),4);
+  return (v<0?'−':'')+Math.abs(v).toFixed(3);
+}
+function fmtDec(v){ if (Math.abs(v)<1e-12) return '0'; const t=String(+Math.abs(v).toFixed(3)); return (v<0?'−':'')+t; }
+function fmtQ(v){ for (let d=1; d<=4096; d*=2){ const n=v*d; if (Math.abs(n-Math.round(n))<1e-9) return fmtFrac(Math.round(n),d); } return fmtDec(v); }
+function q2Grid(){ const s = EXV ? EXV.s : ($('exCv').clientWidth/4.4)*exs.zoom; let q=1; while (s/(q*2)>=9 && q<4096) q*=2; return q; }
+const fmtCoord = v => EXAMPLES[exs.cur].q2 ? fmtQ(v) : fmtDec(v);
+const fmtR = v => v>=100 ? v.toFixed(0) : v>=0.01 ? v.toFixed(3) : v.toPrecision(2);
+function exPlace(wx,wy,tolW){
+  const E=EXAMPLES[exs.cur];
+  if (E.q2){
+    const q=q2Grid(), rx=Math.round(wx*q)/q, ry=Math.round(wy*q)/q;
+    exs.p = Math.hypot(wx-rx,wy-ry)<tolW ? {x:rx,y:ry,on:null,rational:true,dmin:0} : {x:wx,y:wy,on:null,rational:false,dmin:0};
+    return;
+  }
+  let best=null, dmin=Infinity;
+  E.pieces.forEach((pc,i)=>{
+    const c=closestPiece(pc,wx,wy,false); dmin=Math.min(dmin,c.d);
+    if (c.d<tolW){ const pri=pc.t==='pt'?0:1; if (!best || pri<best.pri || (pri===best.pri && c.d<best.d)) best={...c,i,pri}; }
+  });
+  exs.p = best ? {x:best.x, y:best.y, on:best.i, dmin:0} : {x:wx, y:wy, on:null, dmin};
+}
+function exAnalyze(){
+  const E=EXAMPLES[exs.cur], p=exs.p;
+  if (E.q2) return {cls:'bd', inA:p.rational, dA:0, dC:0};
+  if (p.on!=null) return {cls:'bd', inA:E.pieces[p.on].inA, dA:0, dC:0, piece:E.pieces[p.on]};
+  const sd = E.R ? E.R.sd(p.x,p.y) : Infinity;
+  if (sd<0) return {cls:'int', inA:true, dC:-sd, dA:0};
+  const dA=Math.min(E.R?Math.max(sd,0):Infinity, p.dmin);
+  return {cls: dA>0?'ext':'bd', inA:false, dA, dC:0};
+}
+function exWitness(E,p,eps,a){
+  let xIn=null, yOut=null, note='';
+  if (E.q2){
+    const q=Math.ceil(1.5/eps);
+    if (p.rational) xIn={x:p.x,y:p.y};
+    else { const nx=Math.round(p.x*q), ny=Math.round(p.y*q); xIn={x:nx/q,y:ny/q}; note+=`${MM('<i>x</i> = ('+fmtFrac(nx,q)+', '+fmtFrac(ny,q)+')')} は座標がともに有理数の点です。`; }
+    if (!p.rational) yOut={x:p.x,y:p.y};
+    else { yOut={x:p.x+Math.SQRT2*eps/4, y:p.y}; note+=`${MM('<i>y</i> = (<i>p</i><sub>1</sub> + √2<i>ε</i>/4, <i>p</i><sub>2</sub>)')} は ${MM('<i>x</i>')} 座標が無理数の点です。`; }
+    return {xIn,yOut,note};
+  }
+  if (a.inA) xIn={x:p.x,y:p.y}; else yOut={x:p.x,y:p.y};
+  const inR=(qx,qy)=>E.R && E.R.sd(qx,qy)<0;
+  if (!yOut){
+    outer: for (const f of [0.6,0.35,0.15]) for (let k=0;k<48;k++){
+      const t=(k+0.5)*TAU/48, qx=p.x+f*eps*Math.cos(t), qy=p.y+f*eps*Math.sin(t);
+      if (!inR(qx,qy)){ yOut={x:qx,y:qy}; break outer; }
+    }
+  }
+  if (!xIn && E.R){
+    outer2: for (const f of [0.6,0.35,0.15]) for (let k=0;k<48;k++){
+      const t=(k+0.5)*TAU/48, qx=p.x+f*eps*Math.cos(t), qy=p.y+f*eps*Math.sin(t);
+      if (inR(qx,qy)){ xIn={x:qx,y:qy}; break outer2; }
+    }
+  }
+  if (!xIn && E.witnessIn){ const w=E.witnessIn(p,eps); if (w){ xIn=w; note+=w.note||''; } }
+  if (!xIn){
+    let bd=Infinity;
+    for (const pc of E.pieces) if (pc.inA){ const c=closestPiece(pc,p.x,p.y,true); if (c.d<eps && c.d<bd){ bd=c.d; xIn={x:c.x,y:c.y}; } }
+  }
+  return {xIn,yOut,note};
+}
+// ---- drawing ----
+function exSetup(cv){
+  const dpr=window.devicePixelRatio||1, w=cv.clientWidth, h=cv.clientHeight;
+  const W=Math.max(1,Math.round(w*dpr)), H=Math.max(1,Math.round(h*dpr));
+  if (cv.width!==W || cv.height!==H){ cv.width=W; cv.height=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const s=(w/4.4)*exs.zoom;
+  return {ctx, V:{w,h,s, X:x=>w/2+(x-exs.cx)*s, Y:y=>h/2-(y-exs.cy)*s, toW:(px,py)=>({x:exs.cx+(px-w/2)/s, y:exs.cy-(py-h/2)/s})}};
+}
+function niceStep(s){ const raw=70/s, p=Math.pow(10,Math.floor(Math.log10(raw))); for (const m of [1,2,5,10]) if (m*p>=raw) return m*p; return 10*p; }
+function exAxes(ctx,V,labelsOnly){
+  const step=niceStep(V.s), tl=V.toW(0,0), br=V.toW(V.w,V.h);
+  if (!labelsOnly){
+  ctx.fillStyle=PAL.canvas; ctx.fillRect(0,0,V.w,V.h);
+  ctx.strokeStyle=PAL.grid; ctx.lineWidth=1; ctx.beginPath();
+  for (let x=Math.ceil(tl.x/step)*step; x<=br.x; x+=step){ ctx.moveTo(V.X(x),0); ctx.lineTo(V.X(x),V.h); }
+  for (let y=Math.ceil(br.y/step)*step; y<=tl.y; y+=step){ ctx.moveTo(0,V.Y(y)); ctx.lineTo(V.w,V.Y(y)); }
+  ctx.stroke();
+  ctx.strokeStyle=PAL.muted; ctx.lineWidth=1.2; ctx.beginPath();
+  if (tl.x<0 && br.x>0){ ctx.moveTo(V.X(0),0); ctx.lineTo(V.X(0),V.h); }
+  if (br.y<0 && tl.y>0){ ctx.moveTo(0,V.Y(0)); ctx.lineTo(V.w,V.Y(0)); }
+  ctx.stroke();
+  return; }
+  const dec=Math.max(0,-Math.floor(Math.log10(step)+1e-9));
+  const lab=v=>{ const t=Math.abs(v)<step/1e6?'0':v.toFixed(dec); return t.replace('-','−'); };
+  ctx.fillStyle=PAL.muted; ctx.font=`11px ${cssv('--sans')}`; ctx.textAlign='center'; ctx.textBaseline='top'; ctx.shadowColor=PAL.canvas; ctx.shadowBlur=3;
+  const ay=Math.min(Math.max(V.Y(0)+3,2),V.h-14);
+  for (let x=Math.ceil(tl.x/step)*step; x<=br.x; x+=step) if (Math.abs(x)>step/1e6) ctx.fillText(lab(x),V.X(x),ay);
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  const ax=Math.min(Math.max(V.X(0)+4,2),V.w-40);
+  for (let y=Math.ceil(br.y/step)*step; y<=tl.y; y+=step) if (Math.abs(y)>step/1e6) ctx.fillText(lab(y),ax,V.Y(y));
+}
+let sinCache={key:'',path:null,band:null};
+function sinGeom(V){
+  const key=[V.w,V.h,V.s,exs.cx,exs.cy].join(',');
+  if (sinCache.key===key) return sinCache;
+  const xl=V.toW(0,0).x, xr=V.toW(V.w,0).x, e0=0.6/V.s;
+  const umin=Math.max(xl,e0), umax=Math.min(1,xr), path=new Path2D();
+  if (umax>umin){
+    const t0=1/umax, t1=1/umin; let dt=0.2; if ((t1-t0)/dt>150000) dt=(t1-t0)/150000;
+    path.moveTo(V.X(1/t0),V.Y(Math.sin(t0)));
+    for (let t=t0+dt; t<t1; t+=dt) path.lineTo(V.X(1/t),V.Y(Math.sin(t)));
+    path.lineTo(V.X(1/t1),V.Y(Math.sin(t1)));
+  }
+  const band = (xl<e0 && xr>0) ? {x0:V.X(0), x1:V.X(Math.min(e0,xr))} : null;
+  sinCache={key,path,band}; return sinCache;
+}
+function exDrawPiece(ctx,V,pc,inc,color){
+  ctx.save(); ctx.strokeStyle=color; ctx.fillStyle=color;
+  const solid=()=>{ ctx.lineWidth=2.6; ctx.setLineDash([]); ctx.lineCap='round'; };
+  const dashed=()=>{ ctx.lineWidth=1.6; ctx.setLineDash([7,5]); ctx.lineCap='butt'; };
+  if (pc.t==='pt'){
+    ctx.beginPath(); ctx.arc(V.X(pc.x),V.Y(pc.y),4.6,0,TAU);
+    if (inc) ctx.fill(); else { ctx.fillStyle=PAL.canvas; ctx.fill(); ctx.lineWidth=1.7; ctx.stroke(); }
+  } else if (pc.t==='seg'){
+    inc?solid():dashed(); ctx.beginPath(); ctx.moveTo(V.X(pc.ax),V.Y(pc.ay)); ctx.lineTo(V.X(pc.bx),V.Y(pc.by)); ctx.stroke();
+  } else if (pc.t==='arc'){
+    inc?solid():dashed(); ctx.beginPath(); ctx.arc(V.X(pc.cx),V.Y(pc.cy),pc.r*V.s,-pc.a0,-pc.a1,true); ctx.stroke();
+  } else if (pc.t==='graph'){
+    ctx.lineWidth=inc?2.4:1.4; if (!inc) ctx.globalAlpha=0.4; ctx.beginPath();
+    for (let i=0;i<=300;i++){ const u=pc.x0+(pc.x1-pc.x0)*i/300; i?ctx.lineTo(V.X(u),V.Y(pc.f(u))):ctx.moveTo(V.X(u),V.Y(pc.f(u))); }
+    ctx.stroke();
+  } else {
+    const g=sinGeom(V); ctx.lineWidth=inc?1.6:1.2; if (!inc) ctx.globalAlpha=0.4; ctx.stroke(g.path);
+    if (g.band){ ctx.globalAlpha=inc?0.55:0.25; ctx.fillRect(g.band.x0,V.Y(1),Math.max(1,g.band.x1-g.band.x0),V.Y(-1)-V.Y(1)); }
+  }
+  ctx.restore();
+}
+function exDrawSet(ctx,V,E,mode){
+  const col = mode==='ext' ? PAL.muted : PAL.a;
+  if (E.q2){
+    if (mode==='cl'||mode==='bd'){ ctx.fillStyle=rgba(PAL.a,0.22); ctx.fillRect(0,0,V.w,V.h); }
+    else if (mode==='A'){
+      ctx.fillStyle=rgba(PAL.a,0.07); ctx.fillRect(0,0,V.w,V.h);
+      const q=q2Grid();
+      const tl=V.toW(0,0), br=V.toW(V.w,V.h); ctx.fillStyle=PAL.a;
+      for (let i=Math.ceil(tl.x*q); i<=br.x*q; i++) for (let j=Math.ceil(br.y*q); j<=tl.y*q; j++){ ctx.beginPath(); ctx.arc(V.X(i/q),V.Y(j/q),1.4,0,TAU); ctx.fill(); }
+    }
+    return;
+  }
+  if (mode==='ext'){ ctx.fillStyle=rgba(PAL.muted,0.18); ctx.beginPath(); ctx.rect(0,0,V.w,V.h); if (E.R) E.R.path(ctx,V); ctx.fill('evenodd'); }
+  else if (mode!=='bd' && E.R){ ctx.fillStyle=rgba(PAL.a,0.22); ctx.beginPath(); E.R.path(ctx,V); ctx.fill(); }
+  const order=[...E.pieces].sort((a,b)=>(a.t==='pt')-(b.t==='pt'));
+  for (const pc of order){
+    const inc = mode==='A' ? pc.inA : (mode==='cl'||mode==='bd');
+    exDrawPiece(ctx,V,pc,inc,col);
+  }
+}
+function exLabel(ctx,x,y,text,color,align){ ctx.save(); ctx.font=`italic 15px ${cssv('--serif')}`; ctx.textAlign=align||'left'; ctx.textBaseline='middle'; ctx.lineWidth=3; ctx.strokeStyle=PAL.canvas; ctx.strokeText(text,x,y); ctx.fillStyle=color; ctx.fillText(text,x,y); ctx.restore(); }
+const CLSNAME={int:'内点', bd:'境界点', ext:'外点'};
+const CLSFORM={int:MM('<i>p</i> ∈ <i>A</i><sup><i>o</i></sup>'), bd:MM('<i>p</i> ∈ ∂<i>A</i>'), ext:MM('<i>p</i> ∈ (<i>A</i><sup>c</sup>)<sup><i>o</i></sup> = ℝ<sup>2</sup> ∖ <span class="ov"><i>A</i></span>')};
+function renderEx(){
+  const cv=$('exCv'); if (!cv.clientWidth) return;
+  const {ctx,V}=exSetup(cv); EXV=V;
+  const E=EXAMPLES[exs.cur], p=exs.p, a=exAnalyze();
+  exs.lastCls=a.cls;
+  exAxes(ctx,V); exDrawSet(ctx,V,E,exs.view); exAxes(ctx,V,true);
+  const hide = exs.quiz && !exs.answered;
+  const X=V.X(p.x), Y=V.Y(p.y);
+  let wit=null;
+  if (!hide && exs.nbhd==='eps') exDrawEpsBall(ctx,V,E,p,exs.eps,exs.view);
+  if (!hide && exs.nbhd==='max'){
+    const r = a.cls==='int' ? a.dC : a.cls==='ext' ? a.dA*0.999 : exs.eps;
+    const col = a.cls==='int' ? PAL.a : a.cls==='ext' ? PAL.muted : PAL.bad;
+    ctx.save(); ctx.fillStyle=rgba(col,0.10); ctx.strokeStyle=col; ctx.lineWidth=1.8; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.arc(X,Y,Math.min(r*V.s,1e5),0,TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+    if (a.cls==='bd'){
+      wit=exWitness(E,p,exs.eps,a);
+      if (wit.yOut && !(wit.yOut.x===p.x && wit.yOut.y===p.y)){
+        const qx=V.X(wit.yOut.x), qy=V.Y(wit.yOut.y), k=5;
+        ctx.save(); ctx.strokeStyle=PAL.bad; ctx.lineWidth=2.2; ctx.beginPath(); ctx.moveTo(qx-k,qy-k); ctx.lineTo(qx+k,qy+k); ctx.moveTo(qx+k,qy-k); ctx.lineTo(qx-k,qy+k); ctx.stroke(); ctx.restore();
+        exLabel(ctx,qx+8,qy+13,'y ∉ A',PAL.bad);
+      }
+      if (wit.xIn && !(wit.xIn.x===p.x && wit.xIn.y===p.y)){
+        const qx=V.X(wit.xIn.x), qy=V.Y(wit.xIn.y);
+        ctx.save(); ctx.fillStyle=PAL.a; ctx.strokeStyle=PAL.canvas; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(qx,qy,5,0,TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+        exLabel(ctx,qx+8,qy+13,'x ∈ A',PAL.a);
+      }
+    }
+  }
+  ctx.save(); ctx.fillStyle=PAL.ink; ctx.strokeStyle=PAL.canvas; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(X,Y,4,0,TAU); ctx.fill(); ctx.stroke(); ctx.restore();
+  const pIsW = !hide && a.cls==='bd' && exs.nbhd==='max';
+  exLabel(ctx,X-8,Y-14, pIsW ? (a.inA ? 'p = x ∈ A' : 'p = y ∉ A') : 'p', PAL.ink,'right');
+  // caption
+  const capMap={A:`表示中：${AA} ＝ ${MM(E.set)}`, int:`表示中：内部 ${MM('<i>A</i><sup><i>o</i></sup>')} ＝ ${E.int}`, cl:`表示中：閉包 ${MM('<span class="ov"><i>A</i></span>')} ＝ ${E.cl}`, bd:`表示中：境界 ${MM('∂<i>A</i>')} ＝ ${E.bd}`, ext:`表示中：外部 ${MM('(<i>A</i><sup>c</sup>)<sup><i>o</i></sup> = ℝ<sup>2</sup> ∖ <span class="ov"><i>A</i></span>')}（閉包の外側）`};
+  let cap=capMap[exs.view]; if (E.q2 && exs.view==='A') cap+='。ℚ² の点は平面全体に詰まっていて描ききれないので，図の点はその一部です。';
+  if (exs.view==='int' && E.int===MM('∅')) cap+='（何も描かれません）';
+  if (exs.view==='ext' && E.q2) cap+='　ℚ² では外部は空集合です。';
+  if ($('exCap').innerHTML!==cap) $('exCap').innerHTML=cap;
+  $('zLabel').textContent = exs.zoom>1 ? `倍率 ×${exs.zoom}` : '';
+  // panel
+  let html=`<div>${MM(`<i>p</i> = (${fmtCoord(p.x)}, ${fmtCoord(p.y)})`)}${a.piece&&!hide?`　${a.piece.name}の上の点`:''}</div>`;
+  if (hide){
+    html+=`<p>この点 ${MM('<i>p</i>')} は ${AA} の内点・境界点・外点のどれでしょう？</p><div class="quizbtns"><button class="btn" type="button" data-g="int">内点</button><button class="btn" type="button" data-g="bd">境界点</button><button class="btn" type="button" data-g="ext">外点</button></div>`;
+  } else {
+    if (exs.quiz && exs.answered) html += exs.guess===a.cls ? '<div class="qres ok">正解です。</div>' : `<div class="qres ng">残念，正しくは${CLSNAME[a.cls]}です。</div>`;
+    const inTxt = E.q2 ? (p.rational?'はい（座標がともに有理数）':'いいえ（座標に無理数を含む点とみなします）') : (a.inA?'はい':'いいえ');
+    html+=`<div>${MM('<i>p</i> ∈ <i>A</i>')} か：${inTxt}</div>`;
+    html+=`<div class="vbig ${a.cls}">${CLSNAME[a.cls]}　<span style="font-size:.78em;font-weight:400">${CLSFORM[a.cls]}</span></div>`;
+    const nb=exs.nbhd;
+    if (nb==='eps') html+=exEpsPanel(E,p,a);
+    else if (a.cls==='int') html+= nb==='max'
+      ? `<p>${MM('<i>p</i>')} から ${MM('<i>A</i><sup>c</sup>')} までの距離は ${MM('<i>r</i> ≈ '+fmtR(a.dC))} です。青い近傍 ${MM('U(<i>p</i>; <i>r</i>)')} は ${AA} に収まり，これより大きい近傍は ${AA} からはみ出します。</p>`
+      : `<p>${MM('<i>p</i>')} から ${MM('<i>A</i><sup>c</sup>')} までの距離は ${MM('<i>r</i> ≈ '+fmtR(a.dC))} なので，半径 ${MM('<i>r</i>')} 以下の近傍 ${MM('U(<i>p</i>; <i>ε</i>)')} はすべて ${AA} に含まれます。</p>`;
+    else if (a.cls==='ext') html+= nb==='max'
+      ? `<p>${MM('<i>p</i>')} から ${AA} までの距離は ${MM('<i>r</i> ≈ '+fmtR(a.dA))} です。灰色の近傍 ${MM('U(<i>p</i>; <i>r</i>)')} は ${AA} と交わりません。</p>`
+      : `<p>${MM('<i>p</i>')} から ${AA} までの距離は ${MM('<i>r</i> ≈ '+fmtR(a.dA))} なので，半径 ${MM('<i>r</i>')} 以下の近傍は ${AA} と交わりません。</p>`;
+    else if (nb==='none'){
+      html+=`<p>どんなに小さい ${MM('<i>ε</i>')} でも，${MM('U(<i>p</i>; <i>ε</i>)')} は ${AA} の点とも ${AA} の外の点とも交わります。</p><p class="small">${a.inA?'この点は A に属する境界点です。':'この点は A に属さない境界点です。'}</p>`;
+    } else {
+      html+=`<p>どんなに小さい ${MM('<i>ε</i>')} でも，${MM('U(<i>p</i>; <i>ε</i>)')} は ${AA} の点とも ${AA} の外の点とも交わります。図では半径 ${MM('<i>ε</i> = '+fmtR(exs.eps))} の球の中に ${MM('<i>x</i> ∈ <i>A</i>')} と ${MM('<i>y</i> ∉ <i>A</i>')} を示しています。この点では ${MM('<i>p</i>')} 自身が ${a.inA?MM('<i>x</i>'):MM('<i>y</i>')} の役を兼ねています。</p>`;
+      if (wit && wit.note) html+=`<p>${wit.note}</p>`;
+      if (exs.eps*V.s<10) html+=`<p class="small">球が小さくて見えにくいときは「拡大」を押してください（${MM('<i>p</i>')} を中心に拡大します）。</p>`;
+      html+=`<p class="small">${a.inA?'この点は A に属する境界点です。':'この点は A に属さない境界点です。'}</p>`;
+    }
+  }
+  if (!hide && exs.nbhd==='none') html+=`<p class="small">図の上の「最大の近傍」「半径 ε を固定」で，判定の根拠を図で確かめられます。</p>`;
+  if (html!==exs.lastStat){ $('exStat').innerHTML=html; exs.lastStat=html; }
+  $('exScore').textContent = exs.quiz ? `正解 ${exs.score.ok} / ${exs.score.n}` : '';
+  $('exEpsRow').hidden = exs.nbhd==='none' || hide;
+  $('exEpsLab').textContent = exs.nbhd==='eps' ? '近傍の半径' : '境界点で使う近傍の半径';
+  $('exEpsRow').style.opacity = (exs.nbhd==='eps' || a.cls==='bd') ? 1 : 0.5;
+}
+// ---- 固定した ε の近傍と集合の関係 ----
+let hatchCache={key:'',pat:null};
+function hatchPattern(ctx,color){
+  if (hatchCache.key===color && hatchCache.pat) return hatchCache.pat;
+  const c=document.createElement('canvas'); c.width=c.height=8; const g=c.getContext('2d');
+  g.strokeStyle=color; g.lineWidth=1.3; g.beginPath(); g.moveTo(0,8); g.lineTo(8,0); g.moveTo(-2,2); g.lineTo(2,-2); g.moveTo(6,10); g.lineTo(10,6); g.stroke();
+  hatchCache={key:color, pat:ctx.createPattern(c,'repeat')}; return hatchCache.pat;
+}
+const inSet = (pc,S) => S==='A' ? pc.inA : (S==='cl'||S==='bd');
+function exDrawEpsBall(ctx,V,E,p,eps,S){
+  const X=V.X(p.x), Y=V.Y(p.y), R=Math.min(eps*V.s,1e5), sc = S==='ext'?PAL.muted:PAL.a;
+  ctx.save(); ctx.beginPath(); ctx.arc(X,Y,R,0,TAU); ctx.clip();
+  // まず近傍全体を「S に入らない部分」（赤い斜線）で塗り，S に入る 2 次元部分を上から塗りつぶす
+  ctx.fillStyle=PAL.canvas; ctx.fillRect(0,0,V.w,V.h);
+  ctx.fillStyle=hatchPattern(ctx,rgba(PAL.bad,0.75)); ctx.fillRect(0,0,V.w,V.h);
+  const paint = (clipFn,rule) => { ctx.save(); ctx.beginPath(); clipFn(); ctx.clip(rule||'nonzero'); ctx.fillStyle=PAL.canvas; ctx.fillRect(0,0,V.w,V.h); ctx.fillStyle=rgba(sc,0.45); ctx.fillRect(0,0,V.w,V.h); ctx.restore(); };
+  if (E.q2){
+    if (S==='cl'||S==='bd') paint(()=>ctx.rect(0,0,V.w,V.h));
+    else if (S==='A'){ const q=q2Grid(), tl=V.toW(X-R,Y-R), br=V.toW(X+R,Y+R); ctx.fillStyle=PAL.a;
+      for (let i=Math.ceil(tl.x*q); i<=br.x*q; i++) for (let j=Math.ceil(br.y*q); j<=tl.y*q; j++){ ctx.beginPath(); ctx.arc(V.X(i/q),V.Y(j/q),2.2,0,TAU); ctx.fill(); } }
+  } else {
+    if ((S==='A'||S==='int'||S==='cl') && E.R) paint(()=>E.R.path(ctx,V));
+    if (S==='ext') paint(()=>{ ctx.rect(0,0,V.w,V.h); if (E.R) E.R.path(ctx,V); }, 'evenodd');
+    const order=[...E.pieces].sort((u,v)=>(u.t==='pt')-(v.t==='pt'));
+    for (const pc of order) exDrawPiece(ctx,V,pc,true,inSet(pc,S)?sc:PAL.bad);
+  }
+  ctx.restore();
+  ctx.save(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.8; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.arc(X,Y,R,0,TAU); ctx.stroke(); ctx.restore();
+  exLabel(ctx,X+R*0.72+4,Y-R*0.72-6,'U(p; ε)',PAL.ink);
+}
+// 各集合 S について [d(p, S), d(p, S^c)] を返す。U(p;ε) ⊂ S ⇔ d(p,S^c) ≥ ε，U(p;ε) ∩ S ≠ ∅ ⇔ d(p,S) < ε
+function exDists(E,p,a){
+  const I=Infinity;
+  if (E.q2) return {A:[0,0], int:[I,0], cl:[0,I], bd:[0,I], C:[0,0], ext:[I,0]};
+  const dA=a.dA, dC=a.dC;
+  const sd = E.R ? E.R.sd(p.x,p.y) : I;
+  const sdc = E.R ? (E.R.sdc||E.R.sd)(p.x,p.y) : I;      // 閉包の内部 (cl R)° の符号付き距離
+  const dInt = E.R ? Math.max(sd,0) : I;                 // d(p, A°)
+  const dExt = (E.R && sdc<0) ? -sdc : 0;                // d(p, 外部) = d(p, ℝ² ∖ Ā)
+  const dBd = p.on!=null ? 0 : p.dmin;                   // d(p, ∂A)
+  return { A:[dA,dC], int:[dInt,dC], cl:[dA,dExt], bd:[dBd,0], C:[dC,dA], ext:[dExt,dA] };
+}
+const SETROWS = [
+  ['A', MM('<i>A</i>'), ''],
+  ['int', MM('<i>A</i><sup><i>o</i></sup>'), '内部'],
+  ['cl', MM('<span class="ov"><i>A</i></span>'), '閉包'],
+  ['bd', MM('∂<i>A</i>'), '境界'],
+  ['C', MM('<i>A</i><sup>c</sup>'), '補集合'],
+  ['ext', MM('(<i>A</i><sup>c</sup>)<sup><i>o</i></sup>'), '外部'],
+];
+function exEpsPanel(E,p,a){
+  const eps=exs.eps, D=exDists(E,p,a);
+  const yn = b => b ? '<span class="yes">はい</span>' : '<span class="no">いいえ</span>';
+  const U = MM('U(<i>p</i>; <i>ε</i>)');
+  let h=`<table class="reltab"><tr><th>集合 ${MM('<i>S</i>')}</th><th>${MM('U ⊂ <i>S</i>')}</th><th>${MM('U ∩ <i>S</i> ≠ ∅')}</th></tr>`;
+  for (const [k,lab,name] of SETROWS){
+    const sub = D[k][1] >= eps, meet = D[k][0] < eps;
+    h+=`<tr class="${k===exs.view?'cur':''}"><td>${lab}${name?` <span class="small">${name}</span>`:''}</td><td>${yn(sub)}</td><td>${yn(meet)}</td></tr>`;
+  }
+  h+=`</table>`;
+  h+=`<p class="small">ここで ${MM('U = U(<i>p</i>; <i>ε</i>)')}，${MM('<i>ε</i> = '+fmtR(eps))}。色のついた行は，図の上の「表示」で選んでいる集合 ${MM('<i>S</i>')} です。図の近傍の中では <span class="swatch" style="background:${rgba(exs.view==='ext'?PAL.muted:PAL.a,0.45)}"></span>${MM('U ∩ <i>S</i>')}，<span class="swatch" style="background:${rgba(PAL.bad,0.35)}"></span>赤（斜線・線・点）が ${MM('U ∖ <i>S</i>')} です。</p>`;
+  const sub=D.A[1]>=eps, meet=D.A[0]<eps;
+  let c;
+  if (sub) c=`この ${MM('<i>ε</i>')} では ${MM('U(<i>p</i>; <i>ε</i>) ⊂ <i>A</i>')} なので，${MM('<i>p</i> ∈ <i>A</i><sup><i>o</i></sup>')} が確定します（この ${MM('<i>ε</i>')} が内点であることの証拠です）。`;
+  else if (!meet) c=`この ${MM('<i>ε</i>')} では ${MM('U(<i>p</i>; <i>ε</i>) ∩ <i>A</i> = ∅')} なので，${MM('<i>p</i> ∉ <span class="ov"><i>A</i></span>')}，つまり ${MM('<i>p</i>')} は外点だと確定します。`;
+  else {
+    c=`この ${MM('<i>ε</i>')} では ${U} が ${AA} とも ${MM('<i>A</i><sup>c</sup>')} とも交わるので，これだけでは内点か外点かは決まりません。`;
+    if (a.cls==='int') c+=`実際は内点で，${MM('<i>ε</i> ≤ '+fmtR(a.dC))} まで小さくすると ${MM('U(<i>p</i>; <i>ε</i>) ⊂ <i>A</i>')} になります。`;
+    else if (a.cls==='ext') c+=`実際は外点で，${MM('<i>ε</i> ≤ '+fmtR(a.dA))} まで小さくすると ${MM('U(<i>p</i>; <i>ε</i>) ∩ <i>A</i> = ∅')} になります。`;
+    else c+=`${MM('<i>p</i>')} は境界点なので，どんなに ${MM('<i>ε</i>')} を小さくしてもこの状態が続きます。`;
+  }
+  h+=`<p class="concl">${c}</p>`;
+  if (exs.eps*EXV.s<10) h+=`<p class="small">近傍が小さくて見えにくいときは「拡大」を押してください（${MM('<i>p</i>')} を中心に拡大します）。</p>`;
+  h+=`<details><summary>表の読み方（いつも同じ答えになる行）</summary>
+    <p>${MM('U(<i>p</i>; <i>ε</i>)')} は開集合なので，${MM('U ⊂ <i>A</i> ⇔ U ⊂ <i>A</i><sup><i>o</i></sup>')} です（${MM('<i>A</i><sup><i>o</i></sup>')} は ${AA} に含まれる最大の開集合）。表の 1 行目と 2 行目の「${MM('U ⊂ <i>S</i>')}」の列は必ず一致します。</p>
+    <p>同じく ${MM('U ∩ <span class="ov"><i>A</i></span> ≠ ∅ ⇔ U ∩ <i>A</i> ≠ ∅')} です。${MM('U')} が閉包の点 ${MM('<i>q</i>')} を含めば，${MM('U')} は ${MM('<i>q</i>')} の近傍を含むので ${AA} と交わるからです。1 行目と 3 行目の「${MM('U ∩ <i>S</i> ≠ ∅')}」の列も必ず一致します。</p>
+    <p>${MM('U ⊂ <i>A</i><sup>c</sup> ⇔ U ∩ <i>A</i> = ∅')}（「含まれない」と「補集合と交わる」は同じこと。閉包と内部の双対性の考え方です）。補集合の行の「⊂」と，1 行目の「∩」はいつも逆になります。</p></details>`;
+  return h;
+}
+function exSetNb(v){ exs.nbhd=v; document.querySelectorAll('#exNbSeg button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.nb===v))); exs.lastStat=''; schedule(); }
+document.querySelectorAll('#exNbSeg button').forEach(b=>b.addEventListener('click',()=>exSetNb(b.dataset.nb)));
+function exRenderList(){
+  const sel=$('exSelect');
+  if (!sel.options.length) sel.innerHTML = EXAMPLES.map((E,i)=>`<option value="${i}">${E.name}${E.tag?`（${E.tag}）`:''}</option>`).join('');
+  sel.value=String(exs.cur);
+  $('exList').innerHTML = EXAMPLES.map((E,i)=>`<button type="button" data-ex="${i}" aria-pressed="${i===exs.cur}">${E.name}${E.tag?`<span class="tg">${E.tag}</span>`:''}</button>`).join('');
+}
+function exRenderCard(){
+  const E=EXAMPLES[exs.cur];
+  $('exNow').innerHTML = `<span>例：<b>${E.name}</b>${E.tag?`（${E.tag}）`:''}</span><button type="button" class="linkbtn" id="exGoList">例を選び直す</button>`;
+  const chip=(q,i)=>`<button type="button" data-pt="${i}">${q[2]||`(${fmtCoord(q[0])}, ${fmtCoord(q[1])})`}</button>`;
+  $('exCard').innerHTML = `<h3>${E.name}</h3>${E.tag?`<p class="small" style="margin:0">${E.tag}</p>`:''}
+    <p class="formula">${MM(`<i>A</i> = ${E.set}`)}</p>
+    <div class="chips"><span class="small">注目の点</span>${E.pts.map(chip).join('')}</div>
+    ${E.hint?`<p class="small">${E.hint}</p>`:''}
+    <details><summary>${AA} は開集合？ 閉集合？（考えてから開こう）</summary><p><b>答え：</b>${E.kind}</p><p>${E.why}</p></details>
+    <details><summary>内部・閉包・境界</summary><p>内部 ${MM('<i>A</i><sup><i>o</i></sup>')} ＝ ${E.int}</p><p>閉包 ${MM('<span class="ov"><i>A</i></span>')} ＝ ${E.cl}</p><p>境界 ${MM('∂<i>A</i>')} ＝ ${E.bd}</p></details>
+    ${E.note?`<p class="small">${E.note}</p>`:''}
+    <p class="small">この例を直接開くには，ページのリンクの末尾に <code>#ex-${E.id}</code> を付けます。</p>`;
+}
+function exSelect(i){
+  exs.cur=i; exs.zoom=1; exs.cx=0; exs.cy=0; exs.answered=false; sinCache.key='';
+  const q=EXAMPLES[i].pts[0]; exPlace(q[0],q[1],1e-6);
+  exRenderList(); exRenderCard(); schedule();
+}
+function exSetView(v){ exs.view=v; document.querySelectorAll('#exViewSeg button').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.exview===v))); schedule(); }
+function setQuiz(on){ exs.quiz=on; $('exQuiz').checked=on; exs.answered=false; exs.lastStat=''; schedule(); }
+$('exSelect').addEventListener('change', e=>exSelect(+e.target.value));
+$('exNow').addEventListener('click', e=>{ if (e.target.closest('#exGoList')) $('exBottom').scrollIntoView({behavior: reduceMotionEarly?'auto':'smooth', block:'start'}); });
+function exRevealFigure(){ const r=$('exBlock').getBoundingClientRect(); if (r.bottom < 120) window.scrollTo({top: Math.max(0, scrollY + r.top - 16), behavior: reduceMotionEarly?'auto':'smooth'}); }
+$('exList').addEventListener('click', e=>{ const b=e.target.closest('[data-ex]'); if (b) exSelect(+b.dataset.ex); });
+$('exCard').addEventListener('click', e=>{ const b=e.target.closest('[data-pt]'); if (!b) return; const q=EXAMPLES[exs.cur].pts[+b.dataset.pt]; exPlace(q[0],q[1],1e-6); exs.answered=false;
+  if (exs.zoom>1){ exs.cx=exs.p.x; exs.cy=exs.p.y; } schedule(); if (!tour.on) exRevealFigure(); });
+$('exStat').addEventListener('click', e=>{ const b=e.target.closest('[data-g]'); if (!b || exs.answered) return;
+  exs.guess=b.dataset.g; exs.answered=true; exs.score.n++; if (exs.guess===exAnalyze().cls) exs.score.ok++; schedule(); });
+document.querySelectorAll('#exViewSeg button').forEach(b=>b.addEventListener('click',()=>exSetView(b.dataset.exview)));
+$('exQuiz').addEventListener('change', e=>setQuiz(e.target.checked));
+$('exEps').addEventListener('input', e=>{ exs.eps=0.005*Math.pow(160,(+e.target.value)/100); $('exEpsVal').textContent=fmtR(exs.eps); schedule(); });
+$('zIn').addEventListener('click', ()=>{ exs.zoom=Math.min(1024,exs.zoom*2); exs.cx=exs.p.x; exs.cy=exs.p.y; schedule(); });
+$('zOut').addEventListener('click', ()=>{ exs.zoom=Math.max(1,exs.zoom/2); if (exs.zoom===1){ exs.cx=0; exs.cy=0; } schedule(); });
+$('zReset').addEventListener('click', ()=>{ exs.zoom=1; exs.cx=0; exs.cy=0; schedule(); });
+function exPointer(e){ const cv=$('exCv'), r=cv.getBoundingClientRect(); if (!EXV) return; const w=EXV.toW(e.clientX-r.left, e.clientY-r.top); exPlace(w.x,w.y,9/EXV.s); }
+$('exCv').addEventListener('pointerdown', e=>{ $('exCv').setPointerCapture(e.pointerId); exDrag=!exs.quiz; exPointer(e); exs.answered=false; schedule(); });
+$('exCv').addEventListener('pointermove', e=>{ if (exDrag){ exPointer(e); schedule(); } });
+$('exCv').addEventListener('pointerup', ()=>{ exDrag=false; });
+$('exCv').addEventListener('pointercancel', ()=>{ exDrag=false; });
+// ---- page views ----
+function setView(v){
+  if (tour.on && tour.steps!==(v==='ex'?STEPS_EX:STEPS_CELLS)) tourClose();
+  st.view=v;
+  $('viewEx').classList.toggle('hide', v!=='ex'); $('viewCells').classList.toggle('hide', v!=='cells');
+  document.querySelectorAll('#viewTabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===v)));
+  schedule();
+  if (v==='cells' && !tour.on){ let seen=false; try { seen=localStorage.getItem('icl-guide-seen')==='1'; } catch(e){} if (!seen) tourStart(false); }
+}
+document.querySelectorAll('#viewTabs button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+// ---------- guide (tutorial) ----------
+const mi = x => `<span class="m"><i>${x}</i></span>`;
+const SPOT=$('spot'), TOUR=$('tour');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const anySquare = A => { for (let k=OS;k<XID;k++) if (A[k]) return true; return false; };
+const anyEdge = A => { for (let k=OH;k<OS;k++) if (A[k]) return true; return false; };
+const STEPS_CELLS = [
+  { welcome:true, title:'はじめに',
+    body:`<p>このツールでは，平面の集合を描いて，内部・閉包・補集合がどうなるかを確かめられます。</p>
+          <p>ガイドは 9 ステップ，5 分ほどです。各ステップの「やってみよう」を実際に操作すると印がつきます。操作しなくても「次へ」で進めます。</p>
+          <p class="small">ガイドを始めると図はいったん白紙になります。終わったあとで元の図に戻せます。</p>` },
+  { title:'セルを塗る', target:'edBlock',
+    setup(){ if (!tour.cleared){ st.A=Top.empty(); st.B=Top.empty(); tour.cleared=true; onSetsChanged(); }
+             st.layer='A'; setBrush('cell'); setMode('paint'); st.focus=null; showTab('dual'); },
+    body:`<p>平面は「頂点」「開いた辺」「開いた正方形」と，枠の外側の領域に分かれています。これをセルと呼びます。集合はセルを集めて作ります。</p>`,
+    task:`マス目の真ん中あたりをクリック（スマホではタップ）して，開いた正方形を 1 つ ${mi('A')} に入れよう。`,
+    check:()=>anySquare(st.A) },
+  { title:'実線と破線', target:'edBlock',
+    setup(){ st.layer='A'; setMode('paint'); if (!anySquare(st.A)){ st.A[sid(3,2)]=1; onSetsChanged(); } },
+    body:`<p>正方形のまわりに破線と白丸が出ました。これは「この辺や頂点は ${mi('A')} に入っていない」という印です。${mi('A')} に入っている境界は実線と黒丸で表されます。</p>
+          <p>辺や頂点は，線や点のすぐ近くをクリックすると選べます。</p>`,
+    task:`破線の辺を 1 本クリックして，実線に変えよう。もう一度クリックすると元に戻ります。`,
+    check:()=>anyEdge(st.A) },
+  { title:'塗り方と例', target:'paintOpts',
+    setup(){ setMode('paint'); tour.presets.clear(); },
+    body:`<p>「塗り方」を「辺・頂点もまとめて」にすると，正方形を辺と頂点ごと塗れます（閉じた正方形）。ドラッグすると，最初に押したのと同じ種類のセルをまとめて塗れます。</p>
+          <p>「例」からは典型的な集合を読み込めます。</p>`,
+    task:`「例」から「辺の一部だけ含む長方形」を選ぼう。`,
+    check:()=>tour.presets.has('half') },
+  { title:'開集合か，閉集合か', target:'badge',
+    setup(){ setMode('paint'); tour.presets.clear(); },
+    body:`<p>ここには，いま描いている集合が開集合か閉集合かが表示されます。読み込んだ長方形は左と下の辺だけを含むので，開集合でも閉集合でもありません。</p>`,
+    task:`「例」から「開いた長方形」と「閉じた長方形」を順に読み込んで，表示と図の変化を見比べよう。`,
+    check:()=>tour.presets.has('open') && tour.presets.has('closed') },
+  { title:'双対性の 4 枚', target:'tab-dual',
+    setup(){ setMode('paint'); loadPreset('half'); st.dual=1; st.focus=null; showTab('dual'); },
+    body:`<p>上の段は「補集合 → 閉包」，下の段は「内部 → 補集合」の順に計算した結果です。各段の右側の図（最終結果）がいつも一致する，というのが閉包と内部の双対性です。(1)(2) のボタンで二つの等式を切り替えられます。</p>`,
+    task:`4 枚のどれかで，長方形の上の辺（破線）をクリックしよう。その辺がなぜ入る（入らない）のか，説明が下に出ます。`,
+    check:()=>st.focus!=null },
+  { title:'ε-球で調べる', target:'edBlock',
+    setup(){ st.layer='A'; setMode('probe'); setBand(false); setEpsSlider(62); st.probe={x:4.5,y:3.5,k:sid(4,3)}; },
+    body:`<p>「ε-球で調べる」に切り替えました。点 ${mi('p')} のまわりの球 <span class="m">U(<i>p</i>; <i>ε</i>)</span> が ${mi('A')} に含まれるか，${mi('A')} と交わるかを調べます。</p>
+          <p>${mi('p')} はマウスで動かせます（スマホでは指でなぞります）。辺や頂点の近くでは吸い付きます。</p>`,
+    task:`${mi('p')} を長方形の境界（実線か破線の辺）の上に置こう。`,
+    check:()=>!!Top.bd(st.A)[st.probe.k] },
+  { title:'ε を小さくする', target:'probeOpts',
+    setup(){ st.layer='A'; setMode('probe'); },
+    body:`<p>スライダーで ${mi('ε')} を小さくすると，表の答えが「十分小さい ${mi('ε')}」での答えに落ち着きます。表の 1 行目と 3 行目がいつも逆になっていることにも注目しましょう。これが閉包と内部の双対性の核心です。</p>
+          <p>「全点で判定して塗る」をオンにすると，球が ${mi('A')} に含まれる点を濃い色で，${mi('A')} とも補集合とも交わる点を赤で塗ります。</p>`,
+    task:`${mi('ε')} を 0.1 より小さくして，「全点で判定して塗る」をオンにしよう。赤い帯が境界に縮んでいきます。`,
+    check:()=>st.eps<0.1 && st.band },
+  { title:'等式を調べる', target:'tab-ids',
+    setup(){ setBand(false); setMode('paint'); st.idIdx=IDS.findIndex(x=>x.l==='int(A∪B)'); showTab('ids'); buildIdList(); },
+    body:`<p>ここでは等式が成り立つかを調べます。両辺で違うセルは赤で示されます。「つねに成立」の等式はどう描き換えても崩れませんが，「一般には不成立」の等式には反例があります。</p>
+          <p>${mi('B')} を描き換えるときは，図の上の「B を描く」に切り替えます。</p>`,
+    task:`いま選んでいる <span class="m">${F('int(A∪B) = int(A)∪int(B)')}</span> の反例を見よう。「例」から「閉じた左側 A と開いた右側 B」を読み込むか，下のボタンを押してください。`,
+    action:{label:'この例を読み込む', fn:()=>loadPreset('pairInt')},
+    check:()=>{ const it=IDS[st.idIdx]; if (!it||it.g) return false; const env={A:st.A,B:st.B}; return !Top.eq(evalE(parse(it.l),env), evalE(parse(it.r),env)); } },
+  { title:'ほかの機能', target:'tabsBar',
+    setup(){ setMode('paint'); },
+    body:`<p>「式を入力」では，<code>int(A|B)</code> のように自分で式を書いて比べられます。書き方はタブの中の「式の書き方」にあります。</p>
+          <p>「閉包と補集合で何個？」では，${mi('A')} から閉包と補集合をくり返して作れる集合をすべて並べます。</p>
+          <p>ページ下の「状態コード」を使うと，描いた図を先生や友達と共有できます。</p>` },
+  { end:true, title:'ガイドはここまでです', target:'challenges',
+    body:`<p>ページ下の「挑戦課題」に取り組んでみましょう。条件を満たす図を描くと自動で印がつきます。</p>
+          <p>ガイドは右上の「使い方ガイド」からいつでも見直せます。</p>` },
+];
+const STEPS_EX = [
+  { welcome:true, title:'はじめに',
+    body:`<p>このページでは，${MM('ℝ<sup>2</sup>')} の具体的な集合について，点が内点・境界点・外点のどれなのかを調べられます。内部・閉包・境界を図で表示したり，近傍 ${MM('U(<i>p</i>; <i>ε</i>)')} との関係を確かめたりもできます。</p>
+          <p>ガイドは 7 ステップ，4 分ほどです。各ステップの「やってみよう」を実際に操作すると印がつきます。</p>` },
+  { title:'例を選ぶ', target:'exList', setup(){ exSetView('A'); setQuiz(false); exSetNb('none'); },
+    body:`<p>ページの下に代表的な集合が並んでいます。判定の欄にある「例を選び直す」からもここに来られます。</p>`,
+    task:`一覧から「閉円板」を選ぼう。`, check:()=>EXAMPLES[exs.cur].id==='cdisk' },
+  { title:'点を調べる', target:'exBlock', setup(){ setQuiz(false); exSetNb('none'); },
+    body:`<p>図をクリック（スマホではタップ）すると点 ${mi('p')} がそこに移り，内点・境界点・外点の判定が図の右（スマホでは図の下）に出ます。ドラッグで動かすこともできます。線や点の近くでは ${mi('p')} が吸い付くので，境界の上の点も選べます。</p>
+          <p>実線・黒丸は集合に含まれる部分，破線・白丸は含まれない部分です。</p>`,
+    task:`${mi('p')} を円周の上に置いて，境界点になることを確かめよう。`, check:()=>exs.lastCls==='bd' },
+  { title:'内部・閉包・境界を表示', target:'exViewSeg', setup(){},
+    body:`<p>表示を切り替えると，${mi('A')} の内部・閉包・境界・外部（補集合の内部）を描きます。図の下に，表示している集合の式が出ます。</p>`,
+    task:`表示を「外部」に切り替えて，どこが外部になるかを見よう。`, check:()=>exs.view==='ext' },
+  { title:'最大の近傍', target:'exNbSeg', setup(){ exSetView('A'); },
+    body:`<p>「最大の近傍」にすると，判定の根拠になる近傍を描きます。内点では ${mi('A')} に収まる最大の近傍（半径は ${mi('p')} から補集合までの距離），外点では ${mi('A')} と交わらない最大の近傍が描かれます。</p>
+          <p>境界点では，半径 ${mi('ε')} の近傍の中に ${mi('A')} の点 ${mi('x')} と ${mi('A')} の外の点 ${mi('y')} が描かれます。${mi('ε')} を小さくしても ${mi('x')} と ${mi('y')} は近傍の中に残ります。</p>`,
+    task:`「最大の近傍」に切り替えて，${mi('p')} を円板の内部の点に置いてみよう。`, check:()=>exs.nbhd==='max' && exs.lastCls==='int' },
+  { title:'半径 ε を固定する', target:'exPanel', setup(){},
+    body:`<p>「半径 ε を固定」にすると，スライダーで決めた ${mi('ε')} について，近傍 ${MM('U(<i>p</i>; <i>ε</i>)')} が ${mi('A')}，内部，閉包，境界，補集合，外部に含まれるか・交わるかを表にします。</p>
+          <p>図の近傍の中は，図の上の「表示」で選んだ集合 ${mi('S')} に入る部分が塗りつぶし，入らない部分が赤になります。</p>`,
+    task:`図の上で「半径 ε を固定」を選び，表示を「閉包」にして，表の色のついた行と図を見比べよう。`, check:()=>exs.nbhd==='eps' && exs.view==='cl' },
+  { title:'予想してから確かめる', target:'exQuizRow', setup(){ exSetView('A'); exSetNb('none'); tour.mark=exs.score.n; },
+    body:`<p>オンにすると，点をクリック（タップ）したときに判定が隠れ，内点・境界点・外点のどれかを先に答える形になります。</p>`,
+    task:`「予想してから確かめる」をオンにして，1 問答えよう。`, check:()=>exs.quiz && exs.score.n>tour.mark },
+  { title:'例の説明を読む', target:'exBottom', pos:'br', setup(){ setQuiz(false); },
+    body:`<p>ページの下には例の一覧と，選んだ例の定義，「開集合か閉集合か」の答えと理由，内部・閉包・境界の式があります。答えは考えてから開きましょう。「注目の点」のボタンを押すと，その点に ${mi('p')} が移ります。</p>`,
+    task:`「位相幾何学者の正弦曲線」を選び，注目の点 ${MM('(0, 1/2)')} を押そう。そのあと上に戻って図と判定を確かめよう。`,
+    check:()=>EXAMPLES[exs.cur].id==='sin' && exs.p.x===0 && Math.abs(exs.p.y-0.5)<1e-9 },
+  { end:true, title:'ガイドはここまでです', target:'viewTabs',
+    body:`<p>閉包と内部の双対性や，内部・閉包の等式は，上の「セルで描いて調べる」で，自分で集合を描きながら確かめられます（そちらにも専用のガイドがあります）。</p>
+          <p>ガイドは右上の「使い方ガイド」からいつでも見直せます。</p>` },
+];
+function tourShow(i){
+  tour.i=i; tour.lastDone=null;
+  const S=tour.steps, s=S[i];
+  if (s.setup) s.setup();
+  syncSeg();
+  const MID=S.filter(x=>!x.welcome && !x.end).length;
+  const num = S.slice(0,i+1).filter(x=>!x.welcome && !x.end).length;
+  $('tourStep').textContent = (s.welcome||s.end) ? '' : `ステップ ${num} / ${MID}`;
+  $('tourTitle').textContent = s.title;
+  $('tourBody').innerHTML = s.body;
+  $('tourBack').textContent = s.welcome ? 'あとで' : '戻る';
+  $('tourNext').textContent = s.welcome ? '始める' : s.end ? '閉じる' : '次へ';
+  TOUR.hidden=false; tour.on=true;
+  TOUR.classList.toggle('center', !s.target);
+  TOUR.classList.toggle('tl', s.pos==='tl');
+  TOUR.scrollTop=0;
+  schedule();
+  requestAnimationFrame(()=>tourUpdate(true));
+}
+function tourUpdate(scroll){
+  if (!tour.on) return;
+  const s=tour.steps[tour.i], tb=$('tourTask');
+  if (s.task){
+    const done = s.check ? !!s.check() : false;
+    if (done!==tour.lastDone){
+      tour.lastDone=done;
+      tb.hidden=false; tb.className='task'+(done?' done':'');
+      tb.innerHTML = `<span class="mark${done?' on':''}" aria-hidden="true">${done?'✓':''}</span>
+        <div><b>やってみよう</b>　${s.task}${s.action&&!done?`<div><button class="btn" type="button" id="taskAct">${s.action.label}</button></div>`:''}${done?'<div class="ok">できました。「次へ」で進みましょう。</div>':''}</div>`;
+      const b=$('taskAct'); if (b) b.addEventListener('click', s.action.fn);
+    }
+  } else tb.hidden=true;
+  const el = s.target ? $(s.target) : null;
+  if (!el || el.offsetParent===null){ SPOT.hidden=true; TOUR.classList.remove('left'); return; }
+  const mobile = innerWidth<=700;
+  if (scroll){
+    const r=el.getBoundingClientRect();
+    const limit = mobile ? innerHeight - TOUR.offsetHeight - 16 : innerHeight - 16;
+    if (r.top < 64 || r.bottom > limit) window.scrollTo({top: Math.max(0, scrollY + r.top - 64), behavior: reduceMotion?'auto':'smooth'});
+  }
+  const r=el.getBoundingClientRect(), pad=6;
+  SPOT.hidden=false;
+  SPOT.style.left=(r.left+scrollX-pad)+'px'; SPOT.style.top=(r.top+scrollY-pad)+'px';
+  SPOT.style.width=(r.width+2*pad)+'px'; SPOT.style.height=(r.height+2*pad)+'px';
+  TOUR.classList.toggle('left', !mobile && !s.pos && (r.left + r.width/2 > innerWidth/2));
+}
+function tourStart(focus){
+  tour.steps = st.view==='ex' ? STEPS_EX : STEPS_CELLS;
+  tour.snap={A:st.A.slice(), B:st.B.slice()}; tour.cleared=false; $('restoreBar').hidden=true;
+  tourShow(0); if (focus) $('tourNext').focus();
+}
+function tourClose(){
+  const started = tour.cleared;
+  tour.on=false; TOUR.hidden=true; SPOT.hidden=true;
+  try { localStorage.setItem(tour.steps===STEPS_EX?'icl-guide-ex':'icl-guide-seen','1'); } catch(e){}
+  if (started && tour.snap && (!Top.eq(tour.snap.A,st.A) || !Top.eq(tour.snap.B,st.B))) $('restoreBar').hidden=false;
+}
+$('openGuide').addEventListener('click', ()=>tourStart(true));
+$('tourClose').addEventListener('click', tourClose);
+$('tourNext').addEventListener('click', ()=>{ const s=tour.steps[tour.i]; if (s.end) tourClose(); else tourShow(tour.i+1); });
+$('tourBack').addEventListener('click', ()=>{ const s=tour.steps[tour.i]; if (s.welcome) tourClose(); else tourShow(tour.i-1); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape' && tour.on) tourClose(); });
+addEventListener('resize', ()=>{ if (tour.on) tourUpdate(false); });
+$('restoreYes').addEventListener('click', ()=>{ if (tour.snap){ st.A=tour.snap.A.slice(); st.B=tour.snap.B.slice(); st.focus=null; onSetsChanged(); } $('restoreBar').hidden=true; });
+$('restoreNo').addEventListener('click', ()=>{ $('restoreBar').hidden=true; });
+
+// ---------- challenges ----------
+const CHAL = [
+  { id:'p17', html:()=>`<span class="m">${F('bd(A) = cl(A)∖A')}</span> と <span class="m">${F('bd(A) = A∖int(A)')}</span> がどちらも成り立たない ${mi('A')}`,
+    check:()=>{ const A=st.A, b=Top.bd(A); return !Top.eq(b,Top.minus(Top.cl(A),A)) && !Top.eq(b,Top.minus(A,Top.int(A))); } },
+  { id:'iu', html:()=>`<span class="m">${F('int(A∪B) = int(A)∪int(B)')}</span> が成り立たない ${mi('A')}, ${mi('B')}`,
+    check:()=>!Top.eq(Top.int(Top.union(st.A,st.B)), Top.union(Top.int(st.A),Top.int(st.B))) },
+  { id:'ci', html:()=>`<span class="m">${F('cl(A∩B) = cl(A)∩cl(B)')}</span> が成り立たない ${mi('A')}, ${mi('B')}`,
+    check:()=>!Top.eq(Top.cl(Top.inter(st.A,st.B)), Top.inter(Top.cl(st.A),Top.cl(st.B))) },
+  { id:'kk', html:()=>`<span class="m">${F('cl(int(A)) = cl(A)')}</span> と <span class="m">${F('int(cl(A)) = int(A)')}</span> がどちらも成り立たない ${mi('A')}`,
+    check:()=>{ const A=st.A; return !Top.eq(Top.cl(Top.int(A)),Top.cl(A)) && !Top.eq(Top.int(Top.cl(A)),Top.int(A)); } },
+  { id:'orb', html:()=>`${mi('A')} から閉包と補集合で作れる集合の個数として，2, 4, 6, 8, 10 をすべて実現する`,
+    check:()=>[2,4,6,8,10].every(n=>chal.counts.has(n)) },
+];
+const chal={done:new Set(), counts:new Set(), ver:-1};
+try { const sv=JSON.parse(localStorage.getItem('icl-chal')||'null'); if (sv){ sv.done.forEach(x=>chal.done.add(x)); sv.counts.forEach(x=>chal.counts.add(x)); } } catch(e){}
+function saveChal(){ try { localStorage.setItem('icl-chal', JSON.stringify({done:[...chal.done], counts:[...chal.counts]})); } catch(e){} }
+function drawChallenges(){
+  $('chalList').innerHTML = CHAL.map(c=>`<li class="${chal.done.has(c.id)?'done':''}"><span class="mark" aria-hidden="true">${chal.done.has(c.id)?'✓':''}</span><span>${c.html()}${chal.done.has(c.id)?'<span class="small">（達成）</span>':''}</span></li>`).join('');
+  const got=[2,4,6,8,10].map(n=>chal.counts.has(n)?`<b>${n}</b>`:`<span style="opacity:.45">${n}</span>`).join('，');
+  $('orbCounts').innerHTML=`実現した個数：${got}`;
+}
+function evalChallenges(){
+  if (chal.ver===st.edits) return;
+  chal.ver=st.edits;
+  if (!st.manual) return;   // only states reached by the student's own edits count (not presets or the guide)
+  let changed=false;
+  const n=kuratowski(st.A).length;
+  if (!chal.counts.has(n)){ chal.counts.add(n); changed=true; }
+  for (const c of CHAL) if (!chal.done.has(c.id) && c.check()){ chal.done.add(c.id); changed=true; }
+  if (changed){ saveChal(); drawChallenges(); }
+}
+$('chalReset').addEventListener('click', ()=>{ chal.done.clear(); chal.counts.clear(); saveChal(); drawChallenges(); });
+
+// boot
+refreshPalette();
+const mq=matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener && mq.addEventListener('change',()=>{ refreshPalette(); bandCache.key=''; schedule(); });
+let bootView='ex';
+(function(){ const h=location.hash.slice(1); if (!h) return;
+  const r=decodeState(h); if (r){ st.A=r.A; st.B=r.B; bootView='cells'; return; }
+  if (h==='cells') { bootView='cells'; return; }
+  if (h.startsWith('ex-')){ const i=EXAMPLES.findIndex(E=>E.id===h.slice(3)); if (i>=0) exs.cur=i; } })();
+st.eps=epsFromSlider(+$('eps').value); $('epsVal').textContent=st.eps.toFixed(3);
+buildIdList(); syncSeg(); updateCode(); drawChallenges();
+exs.eps=0.005*Math.pow(160,(+$('exEps').value)/100); $('exEpsVal').textContent=fmtR(exs.eps);
+exSelect(exs.cur);
+setView(bootView);
+(function(){ if (tour.on) return; let seen=false; try { seen = localStorage.getItem(st.view==='ex'?'icl-guide-ex':'icl-guide-seen')==='1'; } catch(e){} if (!seen) tourStart(false); })();
+new ResizeObserver(()=>schedule()).observe(document.body);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>schedule());
+schedule();
+</script>
+</body>
+</html>
